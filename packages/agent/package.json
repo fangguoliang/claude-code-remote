@@ -1,0 +1,22 @@
+{
+  "name": "@ccremote/agent",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.16.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

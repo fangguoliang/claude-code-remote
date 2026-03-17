@@ -1,0 +1,13 @@
+import 'dotenv/config';
+import { Tunnel } from './tunnel.js';
+
+console.log('CCremote Agent starting...');
+
+const tunnel = new Tunnel();
+tunnel.connect();
+
+process.on('SIGINT', () => {
+  console.log('\nShutting down...');
+  tunnel.disconnect();
+  process.exit(0);
+});

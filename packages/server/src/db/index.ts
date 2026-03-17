@@ -12,16 +12,18 @@ const __dirname = dirname(__filename);
 let db: Database;
 let SQL: SqlJsStatic;
 
-// 确保数据目录存在
-const dbDir = dirname(config.databasePath);
-mkdirSync(dbDir, { recursive: true });
+// 确保数据目录存在 (unless using in-memory database)
+if (config.databasePath !== ':memory:') {
+  const dbDir = dirname(config.databasePath);
+  mkdirSync(dbDir, { recursive: true });
+}
 
 // 初始化数据库
 export const initDatabase = async () => {
   SQL = await initSqlJs();
 
-  // 尝试加载现有数据库
-  if (existsSync(config.databasePath)) {
+  // 尝试加载现有数据库 (skip for in-memory)
+  if (config.databasePath !== ':memory:' && existsSync(config.databasePath)) {
     const fileBuffer = readFileSync(config.databasePath);
     db = new SQL.Database(fileBuffer);
   } else {
@@ -36,6 +38,7 @@ export const initDatabase = async () => {
 
 // 保存数据库到文件
 export const saveDatabase = () => {
+  if (config.databasePath === ':memory:') return; // Skip for in-memory database
   const data = db.export();
   const buffer = Buffer.from(data);
   writeFileSync(config.databasePath, buffer);
@@ -164,4 +167,11 @@ export const refreshTokenModel = {
     runStatement('DELETE FROM refresh_tokens WHERE expires_at < ?', [Date.now()]);
     saveDatabase();
   },
+};
+
+// 清空所有表 (用于测试)
+export const clearDatabase = () => {
+  db.run('DELETE FROM refresh_tokens');
+  db.run('DELETE FROM agents');
+  db.run('DELETE FROM users');
 };

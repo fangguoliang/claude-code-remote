@@ -170,8 +170,12 @@ function handleWsMessage(msg: any) {
         sessionId = props.tab.sessionId || null;
         status.value = 'connected';
       } else {
-        // Resume failed, create new session
-        console.log('Session resume failed:', msg.payload.error);
+        // Resume failed - session no longer exists on server
+        // Remove from history to prevent zombie sessions
+        if (props.tab.sessionId) {
+          terminalStore.removeHistoryBySessionId(props.tab.sessionId);
+        }
+        console.log('Session resume failed, creating new session:', msg.payload.error);
         ws?.send(JSON.stringify({
           type: 'session:create',
           payload: { cols: terminal?.cols || 80, rows: terminal?.rows || 24, agentId: props.tab.agentId },

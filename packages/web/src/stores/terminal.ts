@@ -181,6 +181,14 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
   }
 
+  // Remove from history by sessionId
+  function removeHistoryBySessionId(sessionId: string) {
+    const index = historyTabs.value.findIndex(t => t.sessionId === sessionId);
+    if (index !== -1) {
+      historyTabs.value.splice(index, 1);
+    }
+  }
+
   function setAgents(list: typeof agents.value) {
     agents.value = list;
   }
@@ -245,6 +253,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     addTab,
     restoreTab,
     removeTab,
+    removeHistoryBySessionId,
     setActiveTab,
     updateTabSessionId,
     setAgents,

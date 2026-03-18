@@ -159,15 +159,8 @@ function restoreLastSession() {
 
   const agent = agents.value.find(a => a.agentId === lastTab.agentId);
   if (agent?.online) {
-    // Create terminal with same agent and sessionId for resume
-    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    terminalStore.addTab({
-      id: tabId,
-      title: agent.name || lastTab.agentId,
-      agentId: lastTab.agentId,
-      createdAt: Date.now(),
-      sessionId: lastTab.sessionId, // Pass sessionId for resume
-    });
+    // Restore existing tab (don't create new history entry)
+    terminalStore.restoreTab(lastTab);
     console.log('Restored session for agent:', lastTab.agentId, 'sessionId:', lastTab.sessionId);
   } else {
     // Agent offline, just clear current session (keep history)
@@ -182,13 +175,13 @@ onUnmounted(() => {
 
 function selectAgent(agentId: string) {
   showAgents.value = false;
-  const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  const agent = agents.value.find(a => a.agentId === agentId);
+  const now = Date.now();
+  const tabId = 'tab-' + now + '-' + Math.random().toString(36).substr(2, 9);
   terminalStore.addTab({
     id: tabId,
-    title: agent?.name || agentId,
+    title: formatSessionTitle(now),
     agentId,
-    createdAt: Date.now(),
+    createdAt: now,
   });
 }
 
@@ -236,6 +229,16 @@ function formatTime(timestamp: number): string {
   if (hours < 24) return `${hours}小时前`;
   if (days < 7) return `${days}天前`;
   return date.toLocaleDateString();
+}
+
+// Format timestamp as session title (e.g., "3月18日14:16")
+function formatSessionTitle(timestamp: number): string {
+  const date = new Date(timestamp);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = date.getHours().toString().padStart(2, '0');
+  const minute = date.getMinutes().toString().padStart(2, '0');
+  return `${month}月${day}日${hour}:${minute}`;
 }
 
 // Restore terminal from history

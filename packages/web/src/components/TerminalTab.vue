@@ -136,17 +136,47 @@ function handleWsMessage(msg: any) {
   switch (msg.type) {
     case 'auth:result':
       if (msg.payload.success) {
-        ws?.send(JSON.stringify({
-          type: 'session:create',
-          payload: { cols: terminal?.cols || 80, rows: terminal?.rows || 24, agentId: props.tab.agentId },
-          timestamp: Date.now(),
-        }));
+        // Check if we have a sessionId to resume
+        if (props.tab.sessionId) {
+          // Try to resume existing session
+          ws?.send(JSON.stringify({
+            type: 'session:resume',
+            sessionId: props.tab.sessionId,
+            payload: { cols: terminal?.cols || 80, rows: terminal?.rows || 24 },
+            timestamp: Date.now(),
+          }));
+        } else {
+          // Create new session
+          ws?.send(JSON.stringify({
+            type: 'session:create',
+            payload: { cols: terminal?.cols || 80, rows: terminal?.rows || 24, agentId: props.tab.agentId },
+            timestamp: Date.now(),
+          }));
+        }
       }
       break;
     case 'session:created':
       if (msg.payload.success) {
         sessionId = msg.payload.sessionId;
         status.value = 'connected';
+        // Update the tab with the sessionId for persistence
+        if (sessionId) {
+          terminalStore.updateTabSessionId(props.tab.id, sessionId);
+        }
+      }
+      break;
+    case 'session:resumed':
+      if (msg.payload.success) {
+        sessionId = props.tab.sessionId || null;
+        status.value = 'connected';
+      } else {
+        // Resume failed, create new session
+        console.log('Session resume failed:', msg.payload.error);
+        ws?.send(JSON.stringify({
+          type: 'session:create',
+          payload: { cols: terminal?.cols || 80, rows: terminal?.rows || 24, agentId: props.tab.agentId },
+          timestamp: Date.now(),
+        }));
       }
       break;
     case 'session:started':

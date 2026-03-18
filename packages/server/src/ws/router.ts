@@ -34,6 +34,10 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
       handleSessionCreate(ws, payload);
       break;
 
+    case 'session:resume':
+      handleSessionResume(ws, sessionId, payload);
+      break;
+
     case 'session:input':
     case 'session:resize':
       // 转发到 Agent
@@ -64,6 +68,13 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
 
     case 'session:started':
       // Agent 确认会话已启动，转发到浏览器
+      if (sessionId) {
+        tunnelManager.routeToBrowser(sessionId, message);
+      }
+      break;
+
+    case 'session:resumed':
+      // Agent 确认会话已恢复，转发到浏览器
       if (sessionId) {
         tunnelManager.routeToBrowser(sessionId, message);
       }
@@ -180,4 +191,38 @@ function handleSessionCreate(ws: WebSocket, payload: any) {
     payload: { sessionId, success },
     timestamp: Date.now(),
   }));
+}
+
+function handleSessionResume(ws: WebSocket, sessionId: string | undefined, payload: any) {
+  if (!sessionId) {
+    ws.send(JSON.stringify({
+      type: 'session:resumed',
+      payload: { success: false, error: 'Missing sessionId' },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
+  const { cols, rows } = payload;
+
+  // Try to resume the session
+  const result = tunnelManager.resumeSession(ws, sessionId);
+
+  if (!result.success) {
+    ws.send(JSON.stringify({
+      type: 'session:resumed',
+      sessionId,
+      payload: { success: false, error: result.error },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
+  // Forward session:resume to Agent
+  tunnelManager.routeToAgent(result.agentId!, {
+    type: 'session:resume',
+    sessionId,
+    payload: { cols, rows },
+    timestamp: Date.now(),
+  });
 }

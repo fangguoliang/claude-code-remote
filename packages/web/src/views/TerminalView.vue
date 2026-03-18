@@ -154,15 +154,16 @@ function restoreLastSession() {
 
   const agent = agents.value.find(a => a.agentId === lastTab.agentId);
   if (agent?.online) {
-    // Create new terminal with same agent
+    // Create terminal with same agent and sessionId for resume
     const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     terminalStore.addTab({
       id: tabId,
       title: agent.name || lastTab.agentId,
       agentId: lastTab.agentId,
       createdAt: Date.now(),
+      sessionId: lastTab.sessionId, // Pass sessionId for resume
     });
-    console.log('Restored session for agent:', lastTab.agentId);
+    console.log('Restored session for agent:', lastTab.agentId, 'sessionId:', lastTab.sessionId);
   } else {
     // Agent offline, just clear current session (keep history)
     terminalStore.clearCurrentSession();
@@ -246,6 +247,7 @@ function restoreFromHistory(tab: typeof terminalStore.historyTabs[0]) {
     title: agent.name || tab.agentId,
     agentId: tab.agentId,
     createdAt: Date.now(),
+    sessionId: tab.sessionId, // Pass sessionId for resume
   });
 }
 

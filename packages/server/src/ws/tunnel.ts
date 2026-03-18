@@ -19,6 +19,8 @@ interface BrowserConnection {
 class TunnelManager {
   private agents = new Map<string, AgentConnection>();
   private browsers = new Map<WebSocket, BrowserConnection>();
+  // Store session -> agentId mapping for session resumption
+  private sessionAgents = new Map<string, string>();
 
   // Agent 注册
   registerAgent(ws: WebSocket, agentId: string, userId: number) {
@@ -45,6 +47,8 @@ class TunnelManager {
           payload: { reason: 'Agent disconnected' },
           timestamp: Date.now(),
         }));
+        // Clean up session mapping
+        this.sessionAgents.delete(sessionId);
       }
       this.agents.delete(agentId);
     }
@@ -62,16 +66,19 @@ class TunnelManager {
     this.browsers.set(ws, conn);
   }
 
-  // 浏览器断开
+  // 浏览器断开 - 不再关闭会话，而是暂停会话
   disconnectBrowser(ws: WebSocket) {
     const browser = this.browsers.get(ws);
     if (browser && browser.agentId && browser.sessionId) {
-      // Notify agent that browser disconnected
+      // Store session -> agentId mapping for potential resume
+      this.sessionAgents.set(browser.sessionId, browser.agentId);
+
+      // Send session:pause to Agent instead of session:close
       const agent = this.agents.get(browser.agentId);
       if (agent) {
         agent.sessions.delete(browser.sessionId);
         agent.ws.send(JSON.stringify({
-          type: 'session:close',
+          type: 'session:pause',
           sessionId: browser.sessionId,
           payload: {},
           timestamp: Date.now(),
@@ -79,6 +86,33 @@ class TunnelManager {
       }
     }
     this.browsers.delete(ws);
+  }
+
+  // 恢复会话
+  resumeSession(browserWs: WebSocket, sessionId: string): { success: boolean; agentId?: string; error?: string } {
+    const agentId = this.sessionAgents.get(sessionId);
+    if (!agentId) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    const agent = this.agents.get(agentId);
+    if (!agent) {
+      // Agent is offline, clean up the session mapping
+      this.sessionAgents.delete(sessionId);
+      return { success: false, error: 'Agent not connected' };
+    }
+
+    const browser = this.browsers.get(browserWs);
+    if (!browser) {
+      return { success: false, error: 'Browser not connected' };
+    }
+
+    // Re-bind browser to the session
+    browser.sessionId = sessionId;
+    browser.agentId = agentId;
+    agent.sessions.set(sessionId, browserWs);
+
+    return { success: true, agentId };
   }
 
   // 绑定浏览器到 Agent

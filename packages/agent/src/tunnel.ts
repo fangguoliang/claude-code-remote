@@ -99,6 +99,18 @@ export class Tunnel {
           }
           break;
 
+        case 'session:pause':
+          if (sessionId) {
+            this.ptyManager.pause(sessionId);
+          }
+          break;
+
+        case 'session:resume':
+          if (sessionId) {
+            this.handleSessionResume(sessionId, payload);
+          }
+          break;
+
         case 'pong':
           break;
       }
@@ -123,6 +135,42 @@ export class Tunnel {
       type: 'session:started',
       sessionId,
       payload: { success: true },
+      timestamp: Date.now(),
+    });
+  }
+
+  private handleSessionResume(sessionId: string, payload: { cols: number; rows: number }) {
+    const { cols, rows } = payload;
+
+    // Check if session exists
+    if (!this.ptyManager.has(sessionId)) {
+      // Session doesn't exist, report failure
+      this.send({
+        type: 'session:resumed',
+        sessionId,
+        payload: { success: false, error: 'Session not found' },
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    // Resize to new dimensions
+    this.ptyManager.resize(sessionId, cols, rows);
+
+    // Resume the session
+    const result = this.ptyManager.resume(sessionId, (data) => {
+      this.send({
+        type: 'session:output',
+        sessionId,
+        payload: { data },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.send({
+      type: 'session:resumed',
+      sessionId,
+      payload: { success: result.success },
       timestamp: Date.now(),
     });
   }

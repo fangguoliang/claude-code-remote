@@ -6,6 +6,7 @@ export interface Tab {
   title: string;
   agentId: string;
   createdAt: number;
+  sessionId?: string; // Optional: used for session persistence
 }
 
 interface StoredSession {
@@ -138,6 +139,19 @@ export const useTerminalStore = defineStore('terminal', () => {
     activeTabId.value = id;
   }
 
+  // Update tab's sessionId (called when session is created)
+  function updateTabSessionId(tabId: string, sessionId: string) {
+    const tab = tabs.value.find(t => t.id === tabId);
+    if (tab) {
+      tab.sessionId = sessionId;
+      // Also update in history
+      const historyTab = historyTabs.value.find(t => t.agentId === tab.agentId);
+      if (historyTab) {
+        historyTab.sessionId = sessionId;
+      }
+    }
+  }
+
   function setAgents(list: typeof agents.value) {
     agents.value = list;
   }
@@ -202,6 +216,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     addTab,
     removeTab,
     setActiveTab,
+    updateTabSessionId,
     setAgents,
     registerKeySender,
     unregisterKeySender,

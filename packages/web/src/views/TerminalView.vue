@@ -29,6 +29,21 @@
         </div>
         <button v-if="tabs.length === 0" class="new-tab-btn" @click="showAgents = !showAgents">+ New Terminal</button>
       </div>
+      <div class="history-dropdown" v-if="historyTabs.length > 0">
+        <button class="history-btn" @click="showHistory = !showHistory" title="历史记录">
+          📋
+        </button>
+        <div class="dropdown-menu history-menu" v-show="showHistory">
+          <div class="menu-header">历史终端</div>
+          <div v-for="tab in historyTabs" :key="tab.id" class="menu-item history-item" @click="restoreFromHistory(tab)">
+            <span class="status-dot" :class="{ online: agents.find(a => a.agentId === tab.agentId)?.online }"></span>
+            <div class="history-info">
+              <span class="history-title">{{ tab.title }}</span>
+              <span class="history-time">{{ formatTime(tab.createdAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="actions">
         <router-link to="/settings" class="action-btn" title="设置">⚙</router-link>
         <button @click="logout" class="action-btn" title="登出">⏻</button>
@@ -69,11 +84,13 @@ const tabs = computed(() => terminalStore.tabs);
 const activeTabId = computed(() => terminalStore.activeTabId);
 const agents = computed(() => terminalStore.agents);
 const onlineAgents = computed(() => agents.value.filter(a => a.online).length);
+const historyTabs = computed(() => terminalStore.historyTabs);
 const loading = ref(true);
 const error = ref('');
 const showAgents = ref(false);
+const showHistory = ref(false);
 
-async function loadAgents() {
+async function loadAgents(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
@@ -109,11 +126,41 @@ async function loadAgents() {
 }
 
 let intervalId: number | null = null;
+let sessionRestored = false;
 
 onMounted(() => {
-  loadAgents();
+  loadAgents().then(() => {
+    // Auto-restore last active terminal after agents are loaded
+    if (!sessionRestored) {
+      restoreLastSession();
+      sessionRestored = true;
+    }
+  });
   intervalId = window.setInterval(loadAgents, 5000);
 });
+
+// Restore last session if agent is online
+function restoreLastSession() {
+  const lastTab = terminalStore.getLastActiveTab();
+  if (!lastTab) return;
+
+  const agent = agents.value.find(a => a.agentId === lastTab.agentId);
+  if (agent?.online) {
+    // Create new terminal with same agent
+    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    terminalStore.addTab({
+      id: tabId,
+      title: agent.name || lastTab.agentId,
+      agentId: lastTab.agentId,
+      createdAt: Date.now(),
+    });
+    console.log('Restored session for agent:', lastTab.agentId);
+  } else {
+    // Agent offline, clear saved session
+    terminalStore.clearAll();
+    console.log('Agent offline, session cleared:', lastTab.agentId);
+  }
+}
 
 onUnmounted(() => {
   if (intervalId) clearInterval(intervalId);
@@ -122,7 +169,13 @@ onUnmounted(() => {
 function selectAgent(agentId: string) {
   showAgents.value = false;
   const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  terminalStore.addTab({ id: tabId, title: `Terminal ${tabs.value.length + 1}`, agentId });
+  const agent = agents.value.find(a => a.agentId === agentId);
+  terminalStore.addTab({
+    id: tabId,
+    title: agent?.name || agentId,
+    agentId,
+    createdAt: Date.now(),
+  });
 }
 
 function closeTab(id: string) {
@@ -135,6 +188,7 @@ function setActiveTab(id: string) {
 
 function logout() {
   authStore.clearTokens();
+  terminalStore.clearAll();
   router.push('/login');
 }
 
@@ -149,6 +203,42 @@ function handleClickOutside(e: MouseEvent) {
   if (!target.closest('.agents-dropdown')) {
     showAgents.value = false;
   }
+  if (!target.closest('.history-dropdown')) {
+    showHistory.value = false;
+  }
+}
+
+// Format timestamp to readable time
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+  return date.toLocaleDateString();
+}
+
+// Restore terminal from history
+function restoreFromHistory(tab: typeof terminalStore.historyTabs[0]) {
+  showHistory.value = false;
+  const agent = agents.value.find(a => a.agentId === tab.agentId);
+  if (!agent?.online) {
+    alert(`Agent "${tab.title}" is offline`);
+    return;
+  }
+  const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  terminalStore.addTab({
+    id: tabId,
+    title: agent.name || tab.agentId,
+    agentId: tab.agentId,
+    createdAt: Date.now(),
+  });
 }
 
 onMounted(() => {
@@ -329,6 +419,58 @@ onUnmounted(() => {
 
 .action-btn:hover {
   color: #e94560;
+}
+
+.history-dropdown {
+  position: relative;
+}
+
+.history-btn {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.history-btn:hover {
+  color: #e0e0e0;
+}
+
+.history-menu {
+  right: 0;
+  left: auto;
+  min-width: 220px;
+}
+
+.menu-header {
+  padding: 0.5rem 0.75rem;
+  color: #888;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.history-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.history-title {
+  color: #e0e0e0;
+}
+
+.history-time {
+  font-size: 0.75rem;
+  color: #666;
 }
 
 .terminal-container {

@@ -69,6 +69,9 @@
       <button class="key-btn arrow-btn" @click="sendKey('ArrowUp')">↑</button>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowDown')">↓</button>
     </div>
+    <div class="footer-bar">
+      <span class="author">作者@fangguoliang</span>
+    </div>
   </div>
 </template>
 
@@ -202,6 +205,8 @@ function logout() {
 // Send special key to active terminal
 function sendKey(key: string) {
   terminalStore.sendKeyToActive(key);
+  // Focus terminal after sending key
+  terminalStore.focusActiveTab();
 }
 
 // Close dropdown when clicking outside
@@ -592,5 +597,18 @@ onUnmounted(() => {
 .arrow-btn {
   padding: 0.75rem 1rem;
   min-width: 50px;
+}
+
+/* 底部作者栏 */
+.footer-bar {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem;
+  background: #16213e;
+}
+
+.author {
+  font-size: 0.7rem;
+  color: #666;
 }
 </style>

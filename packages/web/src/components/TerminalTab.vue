@@ -37,6 +37,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   terminalStore.unregisterKeySender(props.tab.id);
+  terminalStore.unregisterTabFocuser(props.tab.id);
   cleanup();
 });
 
@@ -73,6 +74,11 @@ function initTerminal() {
 
   // Register key sender for this tab
   terminalStore.registerKeySender(props.tab.id, sendKey);
+
+  // Register focus function for this tab
+  terminalStore.registerTabFocuser(props.tab.id, () => {
+    terminal?.focus();
+  });
 
   connectWebSocket();
 }

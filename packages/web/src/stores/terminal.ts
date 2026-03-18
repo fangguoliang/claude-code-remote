@@ -213,6 +213,29 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
   }
 
+  // Focus the active tab's terminal
+  function focusActiveTab() {
+    if (activeTabId.value) {
+      const focuser = tabFocusers.get(activeTabId.value);
+      if (focuser) {
+        focuser();
+      }
+    }
+  }
+
+  // Registry for tab focus functions
+  const tabFocusers = new Map<string, () => void>();
+
+  // Register a focus function for a tab
+  function registerTabFocuser(tabId: string, focuser: () => void) {
+    tabFocusers.set(tabId, focuser);
+  }
+
+  // Unregister a focus function
+  function unregisterTabFocuser(tabId: string) {
+    tabFocusers.delete(tabId);
+  }
+
   // Get the last active tab from saved session (for page refresh)
   function getLastActiveTab(): Tab | null {
     const session = loadSessionData();
@@ -260,6 +283,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     registerKeySender,
     unregisterKeySender,
     sendKeyToActive,
+    focusActiveTab,
+    registerTabFocuser,
+    unregisterTabFocuser,
     getLastActiveTab,
     getLastHistoryTab,
     clearCurrentSession,

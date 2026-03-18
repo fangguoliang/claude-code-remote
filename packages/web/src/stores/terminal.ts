@@ -136,10 +136,23 @@ export const useTerminalStore = defineStore('terminal', () => {
   }
 
   function removeTab(id: string) {
-    const index = tabs.value.findIndex(t => t.id === id);
-    if (index !== -1) {
-      tabs.value.splice(index, 1);
+    const tab = tabs.value.find(t => t.id === id);
+    if (tab) {
+      // Remove from current tabs
+      const index = tabs.value.findIndex(t => t.id === id);
+      if (index !== -1) {
+        tabs.value.splice(index, 1);
+      }
       keySenders.delete(id);
+
+      // Also remove from history (by sessionId)
+      if (tab.sessionId) {
+        const historyIndex = historyTabs.value.findIndex(t => t.sessionId === tab.sessionId);
+        if (historyIndex !== -1) {
+          historyTabs.value.splice(historyIndex, 1);
+        }
+      }
+
       if (activeTabId.value === id) {
         activeTabId.value = tabs.value[0]?.id || null;
       }

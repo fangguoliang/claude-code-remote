@@ -80,6 +80,35 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
       }
       break;
 
+    case 'file:browse':
+    case 'file:download':
+    case 'file:upload':
+      // 浏览器发起的文件操作，路由到绑定的 Agent
+      {
+        const browser = tunnelManager.getBrowser(ws);
+        if (browser?.agentId) {
+          tunnelManager.routeToAgent(browser.agentId, message);
+        } else {
+          ws.send(JSON.stringify({
+            type: 'file:error',
+            payload: { code: 'NO_AGENT', message: 'No agent selected' },
+            timestamp: Date.now(),
+          }));
+        }
+      }
+      break;
+
+    case 'file:list':
+    case 'file:data':
+    case 'file:progress':
+    case 'file:uploaded':
+    case 'file:error':
+      // Agent 返回的文件响应，路由到对应的浏览器会话
+      if (sessionId) {
+        tunnelManager.routeToBrowser(sessionId, message);
+      }
+      break;
+
     case 'ping':
       ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
       break;

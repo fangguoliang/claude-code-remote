@@ -15,6 +15,10 @@ export class FileManager {
       }
       return path.join(home, dirPath.slice(2));
     }
+    // Handle Windows drive letters (e.g., "D:" -> "D:\\")
+    if (/^[A-Za-z]:$/.test(dirPath)) {
+      return dirPath + '\\';
+    }
     return dirPath;
   }
 

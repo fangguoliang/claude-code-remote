@@ -207,10 +207,11 @@ function handleWsMessage(msg: any) {
 }
 
 function cleanup() {
+  // Don't close the session when navigating away - let it persist for resume
+  // Only close the WebSocket without sending session:close
   if (ws) {
-    if (sessionId) {
-      ws.send(JSON.stringify({ type: 'session:close', sessionId, timestamp: Date.now() }));
-    }
+    // Don't send session:close - we want to be able to resume
+    // The server will handle session persistence when we disconnect
     ws.close();
   }
   terminal?.dispose();

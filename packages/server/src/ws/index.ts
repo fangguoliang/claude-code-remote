@@ -28,11 +28,12 @@ export function setupWebSocket(fastify: FastifyInstance) {
     const url = request.url || '';
     const isAgent = url.startsWith('/ws/agent');
 
-    console.log(`WebSocket connected: ${isAgent ? 'agent' : 'browser'}`);
+    console.log(`WebSocket connected: ${isAgent ? 'agent' : 'browser'}, url: ${url}`);
 
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log(`[WS] Received message type: ${message.type}`);
         handleMessage(ws, message, isAgent);
       } catch (err) {
         console.error('Failed to parse message:', err);

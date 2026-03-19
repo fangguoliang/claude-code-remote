@@ -24,11 +24,13 @@ defineProps<{
 
 <style scoped>
 .transfer-progress {
-  position: fixed;
-  bottom: 60px;
+  position: absolute;
+  bottom: 90px;
   left: 10px;
   right: 10px;
   z-index: 100;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .transfer-item {

@@ -122,11 +122,11 @@ export class Tunnel {
           break;
 
         case 'file:download':
-          this.handleFileDownload(sessionId, payload);
+          this.handleFileDownload(payload);
           break;
 
         case 'file:upload':
-          this.handleFileUpload(sessionId, payload);
+          this.handleFileUpload(payload);
           break;
       }
     } catch (err) {
@@ -208,13 +208,11 @@ export class Tunnel {
       });
   }
 
-  private handleFileDownload(sessionId: string | undefined, payload: { path: string }) {
-    if (!sessionId) return;
-
+  private handleFileDownload(payload: { path: string }) {
+    console.log('[Agent] handleFileDownload, path:', payload.path);
     this.fileManager.readFileChunked(payload.path, (data) => {
       this.send({
         type: 'file:data',
-        sessionId,
         payload: {
           path: payload.path,
           content: data.content,
@@ -228,7 +226,6 @@ export class Tunnel {
       // 发送进度
       this.send({
         type: 'file:progress',
-        sessionId,
         payload: {
           path: payload.path,
           direction: 'download',
@@ -239,9 +236,9 @@ export class Tunnel {
         timestamp: Date.now(),
       });
     }).catch((err: Error) => {
+      console.error('[Agent] handleFileDownload error:', err);
       this.send({
         type: 'file:error',
-        sessionId,
         payload: { code: err.message, message: err.message, path: payload.path },
         timestamp: Date.now(),
       });
@@ -249,25 +246,23 @@ export class Tunnel {
   }
 
   private handleFileUpload(
-    sessionId: string | undefined,
     payload: { path: string; content: string; chunkIndex: number; totalChunks: number; totalSize: number; overwrite: boolean }
   ) {
-    if (!sessionId) return;
-
+    console.log('[Agent] handleFileUpload, path:', payload.path, 'chunk:', payload.chunkIndex, '/', payload.totalChunks);
     const { path: filePath, content, chunkIndex, totalChunks, totalSize, overwrite } = payload;
 
     // 首块：初始化上传会话
     if (chunkIndex === 0) {
-      const uploadId = `${sessionId}-${Date.now()}`;
-      this.uploadSessions.set(sessionId, uploadId);
+      const uploadId = `upload-${Date.now()}`;
+      this.uploadSessions.set(filePath, uploadId);
       this.fileManager.startUpload(uploadId, totalChunks, totalSize);
     }
 
-    const uploadId = this.uploadSessions.get(sessionId);
+    const uploadId = this.uploadSessions.get(filePath);
     if (!uploadId) {
+      console.error('[Agent] Upload session not found for:', filePath);
       this.send({
         type: 'file:error',
-        sessionId,
         payload: { code: 'UPLOAD_NOT_FOUND', message: 'Upload session not found', path: filePath },
         timestamp: Date.now(),
       });
@@ -280,7 +275,6 @@ export class Tunnel {
       // 发送进度
       this.send({
         type: 'file:progress',
-        sessionId,
         payload: {
           path: filePath,
           direction: 'upload',
@@ -295,34 +289,34 @@ export class Tunnel {
       if (result.done) {
         this.fileManager.completeUpload(uploadId, filePath)
           .then(() => {
+            console.log('[Agent] Upload completed:', filePath);
             this.send({
               type: 'file:uploaded',
-              sessionId,
               payload: { path: filePath, success: true },
               timestamp: Date.now(),
             });
           })
           .catch((err: Error) => {
+            console.error('[Agent] Upload complete error:', err);
             this.send({
               type: 'file:error',
-              sessionId,
               payload: { code: err.message, message: err.message, path: filePath },
               timestamp: Date.now(),
             });
           })
           .finally(() => {
-            this.uploadSessions.delete(sessionId);
+            this.uploadSessions.delete(filePath);
           });
       }
     } catch (err: unknown) {
       const error = err as Error;
+      console.error('[Agent] Upload chunk error:', error);
       this.send({
         type: 'file:error',
-        sessionId,
         payload: { code: error.message, message: error.message, path: filePath },
         timestamp: Date.now(),
       });
-      this.uploadSessions.delete(sessionId);
+      this.uploadSessions.delete(filePath);
     }
   }
 

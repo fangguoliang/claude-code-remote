@@ -52,7 +52,7 @@ export class FileManager {
 
   async readFileChunked(
     filePath: string,
-    onChunk: (data: { chunkIndex: number; totalChunks: number; content: string }) => void
+    onChunk: (data: { chunkIndex: number; totalChunks: number; totalSize: number; content: string }) => void
   ): Promise<void> {
     try {
       const stat = await fs.stat(filePath);
@@ -75,7 +75,7 @@ export class FileManager {
           await handle.read(buffer, 0, length, start);
           const content = buffer.toString('base64');
 
-          onChunk({ chunkIndex, totalChunks, content });
+          onChunk({ chunkIndex, totalChunks, totalSize, content });
         }
       } finally {
         await handle.close();
@@ -90,5 +90,78 @@ export class FileManager {
       }
       throw err;
     }
+  }
+
+  private uploadBuffers = new Map<string, { chunks: Map<number, string>; totalChunks: number; totalSize: number }>();
+
+  startUpload(sessionId: string, totalChunks: number, totalSize: number): void {
+    this.uploadBuffers.set(sessionId, {
+      chunks: new Map(),
+      totalChunks,
+      totalSize,
+    });
+  }
+
+  writeChunk(
+    sessionId: string,
+    chunkIndex: number,
+    content: string
+  ): { done: boolean; percent: number } {
+    const upload = this.uploadBuffers.get(sessionId);
+    if (!upload) {
+      throw new Error('UPLOAD_NOT_FOUND');
+    }
+
+    upload.chunks.set(chunkIndex, content);
+    const percent = Math.round((upload.chunks.size / upload.totalChunks) * 100);
+
+    return {
+      done: upload.chunks.size === upload.totalChunks,
+      percent,
+    };
+  }
+
+  async completeUpload(sessionId: string, filePath: string): Promise<void> {
+    const upload = this.uploadBuffers.get(sessionId);
+    if (!upload) {
+      throw new Error('UPLOAD_NOT_FOUND');
+    }
+
+    try {
+      // 确保目录存在
+      const dir = path.dirname(filePath);
+      await fs.mkdir(dir, { recursive: true });
+
+      // 合并所有块并写入文件
+      const handle = await fs.open(filePath, 'w');
+
+      try {
+        for (let i = 0; i < upload.totalChunks; i++) {
+          const content = upload.chunks.get(i);
+          if (!content) {
+            throw new Error(`Missing chunk ${i}`);
+          }
+          const buffer = Buffer.from(content, 'base64');
+          await handle.write(buffer, 0, buffer.length, i * this.chunkSize);
+        }
+      } finally {
+        await handle.close();
+      }
+    } catch (err: unknown) {
+      const error = err as { code?: string };
+      if (error.code === 'EACCES') {
+        throw new Error('PERMISSION_DENIED');
+      }
+      if (error.code === 'ENOSPC') {
+        throw new Error('DISK_FULL');
+      }
+      throw err;
+    } finally {
+      this.uploadBuffers.delete(sessionId);
+    }
+  }
+
+  cancelUpload(sessionId: string): void {
+    this.uploadBuffers.delete(sessionId);
   }
 }

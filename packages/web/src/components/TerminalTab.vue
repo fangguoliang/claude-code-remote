@@ -38,6 +38,7 @@ onMounted(() => {
 onUnmounted(() => {
   terminalStore.unregisterKeySender(props.tab.id);
   terminalStore.unregisterTabFocuser(props.tab.id);
+  terminalStore.unregisterTabScroller(props.tab.id);
   cleanup();
 });
 
@@ -78,6 +79,11 @@ function initTerminal() {
   // Register focus function for this tab
   terminalStore.registerTabFocuser(props.tab.id, () => {
     terminal?.focus();
+  });
+
+  // Register scroll to bottom function for this tab
+  terminalStore.registerTabScroller(props.tab.id, () => {
+    terminal?.scrollToBottom();
   });
 
   connectWebSocket();

@@ -70,6 +70,7 @@
       <button class="key-btn arrow-btn" @click="sendKey('ArrowUp')">↑</button>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowDown')">↓</button>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowRight')">→</button>
+      <button class="key-btn bottom-btn" @click="scrollToBottom" title="滚动到底部">⬇</button>
     </div>
     <div class="footer-bar">
       <span class="author">作者@fangguoliang</span>
@@ -211,6 +212,12 @@ function sendKey(key: string) {
   terminalStore.focusActiveTab();
   // Update session activity
   authStore.updateLastActivity();
+}
+
+// Scroll terminal to bottom
+function scrollToBottom() {
+  terminalStore.scrollActiveTabToBottom();
+  terminalStore.focusActiveTab();
 }
 
 // Track user activity for session timeout
@@ -613,6 +620,16 @@ onUnmounted(() => {
 .arrow-btn {
   padding: 0.75rem 1rem;
   min-width: 50px;
+}
+
+.bottom-btn {
+  padding: 0.75rem 1rem;
+  min-width: 50px;
+  background: #4caf50;
+}
+
+.bottom-btn:active {
+  background: #388e3c;
 }
 
 /* 底部作者栏 */

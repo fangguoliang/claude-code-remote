@@ -223,17 +223,40 @@ export const useTerminalStore = defineStore('terminal', () => {
     }
   }
 
+  // Scroll active tab's terminal to bottom
+  function scrollActiveTabToBottom() {
+    if (activeTabId.value) {
+      const scroller = tabScrollers.get(activeTabId.value);
+      if (scroller) {
+        scroller();
+      }
+    }
+  }
+
   // Registry for tab focus functions
   const tabFocusers = new Map<string, () => void>();
+
+  // Registry for tab scroll functions
+  const tabScrollers = new Map<string, () => void>();
 
   // Register a focus function for a tab
   function registerTabFocuser(tabId: string, focuser: () => void) {
     tabFocusers.set(tabId, focuser);
   }
 
+  // Register a scroll to bottom function for a tab
+  function registerTabScroller(tabId: string, scroller: () => void) {
+    tabScrollers.set(tabId, scroller);
+  }
+
   // Unregister a focus function
   function unregisterTabFocuser(tabId: string) {
     tabFocusers.delete(tabId);
+  }
+
+  // Unregister a scroll function
+  function unregisterTabScroller(tabId: string) {
+    tabScrollers.delete(tabId);
   }
 
   // Get the last active tab from saved session (for page refresh)
@@ -284,8 +307,11 @@ export const useTerminalStore = defineStore('terminal', () => {
     unregisterKeySender,
     sendKeyToActive,
     focusActiveTab,
+    scrollActiveTabToBottom,
     registerTabFocuser,
     unregisterTabFocuser,
+    registerTabScroller,
+    unregisterTabScroller,
     getLastActiveTab,
     getLastHistoryTab,
     clearCurrentSession,

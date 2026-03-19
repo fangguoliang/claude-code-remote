@@ -11,3 +11,5 @@ process.on('SIGINT', () => {
   tunnel.disconnect();
   process.exit(0);
 });
+
+export { FileManager } from './file.js';

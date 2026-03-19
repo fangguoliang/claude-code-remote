@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@ccremote/shared": "workspace:*",
     "node-pty": "^1.0.0",
     "ws": "^8.16.0",
     "dotenv": "^16.4.0"

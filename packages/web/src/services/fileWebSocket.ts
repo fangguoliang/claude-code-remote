@@ -1,5 +1,6 @@
 import type { FileListPayload, FileProgressPayload, FileDataPayload, FileUploadedPayload, FileErrorPayload } from '@ccremote/shared';
 import { useFileStore } from '@/stores/file';
+import { useAuthStore } from '@/stores/auth';
 
 type MessageHandler = (data: unknown) => void;
 
@@ -8,15 +9,16 @@ class FileWebSocketService {
   private messageHandlers = new Map<string, MessageHandler[]>();
   private transferChunks = new Map<string, { chunks: Map<number, string>; totalChunks: number; totalSize: number }>();
 
-  connect(url: string, token: string): Promise<void> {
+  connect(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        // 发送认证
+        // 发送认证 - 使用 userId 而不是 token
+        const authStore = useAuthStore();
         this.send({
           type: 'auth',
-          payload: { token },
+          payload: { userId: authStore.userId },
           timestamp: Date.now(),
         });
         resolve();

@@ -148,15 +148,15 @@ async function loadAgents(): Promise<void> {
 
 // Connect to file WebSocket
 async function connectWebSocket(): Promise<void> {
-  const token = authStore.accessToken;
-  if (!token || !settingsStore.settings.apiUrl) return;
+  if (!settingsStore.settings.apiUrl) return;
 
   try {
     // Convert HTTP URL to WebSocket URL
+    // Use the same /ws/browser endpoint as terminal
     const apiUrl = settingsStore.settings.apiUrl;
-    const wsUrl = apiUrl.replace(/^http/, 'ws') + '/ws/file';
+    const wsUrl = apiUrl.replace(/^http/, 'ws') + '/ws/browser';
 
-    await fileWebSocket.connect(wsUrl, token);
+    await fileWebSocket.connect(wsUrl);
     console.log('File WebSocket connected');
   } catch (e) {
     console.error('Failed to connect file WebSocket:', e);

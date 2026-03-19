@@ -85,6 +85,10 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
     case 'file:upload':
       // 浏览器发起的文件操作，路由到绑定的 Agent
       {
+        // 如果 payload 中有 agentId，先绑定
+        if (payload?.agentId) {
+          tunnelManager.bindBrowserToAgent(ws, payload.agentId);
+        }
         const browser = tunnelManager.getBrowser(ws);
         if (browser?.agentId) {
           tunnelManager.routeToAgent(browser.agentId, message);

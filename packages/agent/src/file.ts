@@ -1,13 +1,27 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
 import type { FileEntry } from '@ccremote/shared';
 
 export class FileManager {
   private chunkSize = 1024 * 1024; // 1MB
 
-  async browse(dirPath: string): Promise<FileEntry[]> {
+  // 展开路径（处理 ~ 等）
+  private expandPath(dirPath: string): string {
+    if (dirPath === '~' || dirPath.startsWith('~/')) {
+      const home = os.homedir();
+      if (dirPath === '~') {
+        return home;
+      }
+      return path.join(home, dirPath.slice(2));
+    }
+    return dirPath;
+  }
+
+  async browse(dirPath: string): Promise<{ path: string; entries: FileEntry[] }> {
     try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+      const expandedPath = this.expandPath(dirPath);
+      const entries = await fs.readdir(expandedPath, { withFileTypes: true });
       const result: FileEntry[] = [];
 
       for (const entry of entries) {
@@ -18,7 +32,7 @@ export class FileManager {
 
         if (!entry.isDirectory()) {
           try {
-            const stat = await fs.stat(path.join(dirPath, entry.name));
+            const stat = await fs.stat(path.join(expandedPath, entry.name));
             fileEntry.size = stat.size;
             fileEntry.modifiedAt = stat.mtimeMs;
           } catch {
@@ -37,7 +51,7 @@ export class FileManager {
         return a.name.localeCompare(b.name);
       });
 
-      return result;
+      return { path: expandedPath, entries: result };
     } catch (err: unknown) {
       const error = err as { code?: string };
       if (error.code === 'ENOENT') {

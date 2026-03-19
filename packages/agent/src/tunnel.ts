@@ -192,10 +192,10 @@ export class Tunnel {
 
   private handleFileBrowse(payload: { path: string }) {
     this.fileManager.browse(payload.path)
-      .then((entries) => {
+      .then((result) => {
         this.send({
           type: 'file:list',
-          payload: { path: payload.path, entries },
+          payload: { path: result.path, entries: result.entries },
           timestamp: Date.now(),
         });
       })

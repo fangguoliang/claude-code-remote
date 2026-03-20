@@ -38,7 +38,7 @@
                 <span class="shortcut-name">{{ shortcut.name }}</span>
                 <span class="shortcut-meta">{{ shortcut.commands.length }} 条命令 · {{ agents.find(a => a.agentId === shortcut.agentId)?.name || shortcut.agentId }}</span>
               </div>
-              <button class="delete-btn" @click.stop="deleteShortcutHandler(shortcut.id)" title="删除">×</button>
+              <button class="delete-btn" @click.stop="deleteShortcutHandler(shortcut.id)" title="删除" aria-label="删除快捷方式">×</button>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@
       <span class="author">作者@fangguoliang</span>
     </div>
     <!-- 保存快捷方式弹窗 -->
-    <div class="modal-overlay" v-if="showSaveModal" @click.self="closeSaveModal">
+    <div class="modal-overlay" v-if="showSaveModal" @click.self="closeSaveModal" @keydown.escape="closeSaveModal">
       <div class="modal">
         <div class="modal-header">
           <h3>保存快捷方式</h3>
@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useTerminalStore } from '../stores/terminal';
@@ -357,6 +357,11 @@ function openSaveModal() {
   selectedCommands.value = capturedCommands.value.map(() => true);
   shortcutName.value = '';
   showSaveModal.value = true;
+  // Auto-focus input after DOM update
+  nextTick(() => {
+    const input = document.querySelector('.modal input[type="text"]') as HTMLInputElement;
+    input?.focus();
+  });
 }
 
 // Close save modal
@@ -369,7 +374,10 @@ function closeSaveModal() {
 // Save shortcut
 function saveShortcutHandler() {
   const activeTab = tabs.value.find(t => t.id === activeTabId.value);
-  if (!activeTab) return;
+  if (!activeTab) {
+    alert('无法保存：没有活动的终端会话');
+    return;
+  }
 
   const success = terminalStore.saveShortcut(
     shortcutName.value,
@@ -381,6 +389,8 @@ function saveShortcutHandler() {
     closeSaveModal();
     // Clear captured commands after saving
     terminalStore.clearCapturedCommands();
+  } else {
+    alert('保存失败：请确保名称不为空且至少选择一条命令');
   }
 }
 

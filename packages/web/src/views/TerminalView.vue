@@ -44,7 +44,7 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <router-link to="/files" class="action-btn" title="Files">Files</router-link>
+        <router-link to="/files" class="action-btn" title="文件">📁</router-link>
         <div class="history-dropdown" v-if="historyTabs.length > 0">
           <button class="history-btn" @click="showHistory = !showHistory" title="历史记录">
             📋
@@ -453,8 +453,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   background: #16213e;
-  padding: 0.5rem;
-  gap: 0.5rem;
+  padding: 0.4rem 0.4rem;
+  gap: 0.3rem;
 }
 
 .agents-dropdown {
@@ -464,13 +464,13 @@ onUnmounted(() => {
 .dropdown-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
   background: #1a1a2e;
   border: none;
   border-radius: 4px;
   color: #e0e0e0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -547,7 +547,8 @@ onUnmounted(() => {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.2rem;
+  flex-shrink: 0;
 }
 
 .history-dropdown {
@@ -555,7 +556,7 @@ onUnmounted(() => {
 }
 
 .history-btn {
-  padding: 0.5rem;
+  padding: 0.4rem;
   background: none;
   border: none;
   color: #888;
@@ -603,7 +604,7 @@ onUnmounted(() => {
 }
 
 .action-btn {
-  padding: 0.5rem;
+  padding: 0.4rem;
   background: none;
   border: none;
   color: #888;

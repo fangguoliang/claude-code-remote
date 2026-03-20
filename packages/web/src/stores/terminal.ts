@@ -7,6 +7,22 @@ export interface Tab {
   agentId: string;
   createdAt: number;
   sessionId?: string; // Optional: used for session persistence
+  autoExecuteCommands?: string[]; // Optional: commands to auto-execute on session start
+}
+
+// Captured command from terminal session
+export interface CapturedCommand {
+  text: string;
+  timestamp: number;
+}
+
+// User-created shortcut for executing command sequences
+export interface Shortcut {
+  id: string;
+  name: string;
+  commands: string[];
+  agentId: string;
+  createdAt: number;
 }
 
 interface StoredSession {
@@ -16,7 +32,11 @@ interface StoredSession {
 
 const SESSION_KEY = 'ccremote-terminal-session';
 const HISTORY_KEY = 'ccremote-terminal-history';
+const CAPTURED_KEY = 'ccremote-captured-commands';
+const SHORTCUTS_KEY = 'ccremote-shortcuts';
 const MAX_HISTORY = 10;
+const MAX_SHORTCUTS = 10;
+const MAX_CAPTURED_COMMANDS = 100;
 
 // Key sender function type
 type KeySender = (key: string) => void;
@@ -71,11 +91,63 @@ function saveHistoryData(tabs: Tab[]): void {
   }
 }
 
+// Captured commands storage (session-based)
+function loadCapturedCommands(): CapturedCommand[] {
+  try {
+    const data = sessionStorage.getItem(CAPTURED_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Failed to load captured commands:', e);
+  }
+  return [];
+}
+
+function saveCapturedCommands(commands: CapturedCommand[]): void {
+  try {
+    sessionStorage.setItem(CAPTURED_KEY, JSON.stringify(commands));
+  } catch (e) {
+    console.error('Failed to save captured commands:', e);
+  }
+}
+
+function clearCapturedCommandsStorage(): void {
+  try {
+    sessionStorage.removeItem(CAPTURED_KEY);
+  } catch (e) {
+    console.error('Failed to clear captured commands:', e);
+  }
+}
+
+// Shortcuts storage (persistent)
+function loadShortcuts(): Shortcut[] {
+  try {
+    const data = localStorage.getItem(SHORTCUTS_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Failed to load shortcuts:', e);
+  }
+  return [];
+}
+
+function saveShortcuts(shortcuts: Shortcut[]): void {
+  try {
+    localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(shortcuts));
+  } catch (e) {
+    console.error('Failed to save shortcuts:', e);
+  }
+}
+
 export const useTerminalStore = defineStore('terminal', () => {
   const tabs = ref<Tab[]>([]);
   const activeTabId = ref<string | null>(null);
   const agents = ref<{ agentId: string; name: string; online: boolean }[]>([]);
   const historyTabs = ref<Tab[]>(loadHistoryData());
+  const capturedCommands = ref<CapturedCommand[]>(loadCapturedCommands());
+  const shortcuts = ref<Shortcut[]>(loadShortcuts());
 
   // Registry for key senders (tabId -> sendKey function)
   const keySenders = new Map<string, KeySender>();
@@ -99,6 +171,24 @@ export const useTerminalStore = defineStore('terminal', () => {
     historyTabs,
     () => {
       saveHistoryData(historyTabs.value);
+    },
+    { deep: true }
+  );
+
+  // Watch captured commands and auto-save to sessionStorage
+  watch(
+    capturedCommands,
+    () => {
+      saveCapturedCommands(capturedCommands.value);
+    },
+    { deep: true }
+  );
+
+  // Watch shortcuts and auto-save to localStorage
+  watch(
+    shortcuts,
+    () => {
+      saveShortcuts(shortcuts.value);
     },
     { deep: true }
   );
@@ -286,9 +376,62 @@ export const useTerminalStore = defineStore('terminal', () => {
     tabs.value = [];
     activeTabId.value = null;
     historyTabs.value = [];
+    capturedCommands.value = [];
+    shortcuts.value = [];
     keySenders.clear();
     clearSessionData();
+    clearCapturedCommandsStorage();
     localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(SHORTCUTS_KEY);
+  }
+
+  // Capture a command from terminal
+  function captureCommand(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return; // Skip empty commands
+    capturedCommands.value.push({
+      text: trimmed,
+      timestamp: Date.now(),
+    });
+    // Keep only MAX_CAPTURED_COMMANDS items
+    if (capturedCommands.value.length > MAX_CAPTURED_COMMANDS) {
+      capturedCommands.value = capturedCommands.value.slice(-MAX_CAPTURED_COMMANDS);
+    }
+  }
+
+  // Clear captured commands for current session
+  function clearCapturedCommands() {
+    capturedCommands.value = [];
+    clearCapturedCommandsStorage();
+  }
+
+  // Save a new shortcut
+  function saveShortcut(name: string, commands: string[], agentId: string): boolean {
+    if (!name.trim() || commands.length === 0 || !agentId || commands.some(c => !c.trim())) return false;
+
+    const shortcut: Shortcut = {
+      id: 'shortcut-' + Date.now() + '-' + Math.random().toString(36).slice(2, 11),
+      name: name.trim(),
+      commands,
+      agentId,
+      createdAt: Date.now(),
+    };
+
+    // Add to beginning, keep max MAX_SHORTCUTS
+    shortcuts.value.unshift(shortcut);
+    if (shortcuts.value.length > MAX_SHORTCUTS) {
+      shortcuts.value = shortcuts.value.slice(0, MAX_SHORTCUTS);
+    }
+
+    return true;
+  }
+
+  // Delete a shortcut
+  function deleteShortcut(id: string) {
+    const index = shortcuts.value.findIndex(s => s.id === id);
+    if (index !== -1) {
+      shortcuts.value.splice(index, 1);
+    }
   }
 
   return {
@@ -296,6 +439,8 @@ export const useTerminalStore = defineStore('terminal', () => {
     activeTabId,
     agents,
     historyTabs,
+    capturedCommands,
+    shortcuts,
     addTab,
     restoreTab,
     removeTab,
@@ -316,5 +461,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     getLastHistoryTab,
     clearCurrentSession,
     clearAll,
+    captureCommand,
+    clearCapturedCommands,
+    saveShortcut,
+    deleteShortcut,
   };
 });

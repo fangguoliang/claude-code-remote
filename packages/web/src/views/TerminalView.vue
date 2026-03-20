@@ -22,6 +22,27 @@
           </div>
         </div>
       </div>
+      <!-- 快捷方式下拉框 -->
+      <div class="shortcuts-dropdown">
+        <button class="dropdown-btn" @click="showShortcuts = !showShortcuts" :disabled="shortcuts.length === 0">
+          快捷方式 ({{ shortcuts.length }})
+          <span class="arrow" :class="{ open: showShortcuts }">▼</span>
+        </button>
+        <div class="dropdown-menu" v-show="showShortcuts">
+          <div v-if="shortcuts.length === 0" class="menu-item no-shortcuts">
+            暂无快捷方式
+          </div>
+          <div v-else>
+            <div v-for="shortcut in shortcuts" :key="shortcut.id" class="menu-item shortcut-item" @click="executeShortcut(shortcut)">
+              <div class="shortcut-info">
+                <span class="shortcut-name">{{ shortcut.name }}</span>
+                <span class="shortcut-meta">{{ shortcut.commands.length }} 条命令 · {{ agents.find(a => a.agentId === shortcut.agentId)?.name || shortcut.agentId }}</span>
+              </div>
+              <button class="delete-btn" @click.stop="deleteShortcutHandler(shortcut.id)" title="删除">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="topbar-actions">
         <router-link to="/files" class="action-btn" title="Files">Files</router-link>
         <div class="history-dropdown" v-if="historyTabs.length > 0">
@@ -66,6 +87,7 @@
     <!-- 底部快捷键按钮 -->
     <div class="bottom-bar" v-if="tabs.length > 0">
       <button class="key-btn tab-btn" @click="sendKey('Tab')">Tab</button>
+      <button class="key-btn capture-btn" @click="openSaveModal" :disabled="capturedCommands.length === 0" title="保存为快捷方式">📝</button>
       <div class="spacer"></div>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowLeft')">←</button>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowUp')">↑</button>
@@ -75,6 +97,33 @@
     </div>
     <div class="footer-bar">
       <span class="author">作者@fangguoliang</span>
+    </div>
+    <!-- 保存快捷方式弹窗 -->
+    <div class="modal-overlay" v-if="showSaveModal" @click.self="closeSaveModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>保存快捷方式</h3>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>名称</label>
+            <input v-model="shortcutName" placeholder="输入快捷方式名称" />
+          </div>
+          <div class="form-group">
+            <label>命令清单 ({{ selectedCommandTexts.length }} 条已选)</label>
+            <div class="command-list">
+              <div v-for="(cmd, index) in capturedCommands" :key="index" class="command-item">
+                <input type="checkbox" v-model="selectedCommands[index]" />
+                <span class="command-text">{{ cmd.text }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="closeSaveModal">取消</button>
+          <button class="btn-save" @click="saveShortcutHandler" :disabled="!shortcutName.trim() || selectedCommandTexts.length === 0">保存</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -97,10 +146,23 @@ const activeTabId = computed(() => terminalStore.activeTabId);
 const agents = computed(() => terminalStore.agents);
 const onlineAgents = computed(() => agents.value.filter(a => a.online).length);
 const historyTabs = computed(() => terminalStore.historyTabs);
+const shortcuts = computed(() => terminalStore.shortcuts);
+const capturedCommands = computed(() => terminalStore.capturedCommands);
 const loading = ref(true);
 const error = ref('');
 const showAgents = ref(false);
 const showHistory = ref(false);
+const showShortcuts = ref(false);
+const showSaveModal = ref(false);
+const shortcutName = ref('');
+const selectedCommands = ref<boolean[]>([]);
+
+// Selected command texts
+const selectedCommandTexts = computed(() => {
+  return capturedCommands.value
+    .filter((_, index) => selectedCommands.value[index])
+    .map(cmd => cmd.text);
+});
 
 async function loadAgents(): Promise<void> {
   loading.value = true;
@@ -232,6 +294,9 @@ function handleClickOutside(e: MouseEvent) {
   if (!target.closest('.agents-dropdown')) {
     showAgents.value = false;
   }
+  if (!target.closest('.shortcuts-dropdown')) {
+    showShortcuts.value = false;
+  }
   if (!target.closest('.history-dropdown')) {
     showHistory.value = false;
   }
@@ -283,6 +348,70 @@ function createNewTerminal() {
     return;
   }
   selectAgent(onlineAgent.agentId);
+}
+
+// Open save modal
+function openSaveModal() {
+  if (capturedCommands.value.length === 0) return;
+  // Select all by default
+  selectedCommands.value = capturedCommands.value.map(() => true);
+  shortcutName.value = '';
+  showSaveModal.value = true;
+}
+
+// Close save modal
+function closeSaveModal() {
+  showSaveModal.value = false;
+  shortcutName.value = '';
+  selectedCommands.value = [];
+}
+
+// Save shortcut
+function saveShortcutHandler() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value);
+  if (!activeTab) return;
+
+  const success = terminalStore.saveShortcut(
+    shortcutName.value,
+    selectedCommandTexts.value,
+    activeTab.agentId
+  );
+
+  if (success) {
+    closeSaveModal();
+    // Clear captured commands after saving
+    terminalStore.clearCapturedCommands();
+  }
+}
+
+// Execute shortcut
+function executeShortcut(shortcut: typeof shortcuts.value[0]) {
+  showShortcuts.value = false;
+
+  // Check if agent is online
+  const agent = agents.value.find(a => a.agentId === shortcut.agentId);
+  if (!agent?.online) {
+    alert(`Agent "${shortcut.agentId}" 离线，无法执行快捷方式`);
+    return;
+  }
+
+  // Create new terminal with auto-execute commands
+  const now = Date.now();
+  const tabId = 'tab-' + now + '-' + Math.random().toString(36).slice(2, 11);
+  terminalStore.addTab({
+    id: tabId,
+    title: shortcut.name,
+    agentId: shortcut.agentId,
+    createdAt: now,
+    autoExecuteCommands: shortcut.commands,
+  });
+}
+
+// Delete shortcut
+function deleteShortcutHandler(id: string) {
+  if (confirm('确定删除此快捷方式？')) {
+    terminalStore.deleteShortcut(id);
+  }
 }
 
 onMounted(() => {
@@ -644,5 +773,201 @@ onUnmounted(() => {
 .author {
   font-size: 0.7rem;
   color: #666;
+}
+
+/* 快捷方式下拉框 */
+.shortcuts-dropdown {
+  position: relative;
+}
+
+.shortcuts-dropdown .dropdown-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shortcut-item {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shortcut-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.shortcut-name {
+  color: #e0e0e0;
+}
+
+.shortcut-meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.delete-btn {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.delete-btn:hover {
+  color: #e94560;
+}
+
+/* 记录按钮 */
+.capture-btn {
+  background: #e94560;
+  min-width: 40px;
+  padding: 0.6rem 0.8rem;
+}
+
+.capture-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.capture-btn:not(:disabled):active {
+  background: #ff6b6b;
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #16213e;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #e0e0e0;
+}
+
+.modal-body {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 0.5rem;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+
+.form-group input[type="text"]:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.command-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.command-item:last-child {
+  border-bottom: none;
+}
+
+.command-item input[type="checkbox"] {
+  accent-color: #e94560;
+}
+
+.command-text {
+  color: #e0e0e0;
+  font-family: monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.modal-footer {
+  padding: 1rem;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-cancel,
+.btn-save {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-cancel {
+  background: #333;
+  color: #e0e0e0;
+}
+
+.btn-cancel:hover {
+  background: #444;
+}
+
+.btn-save {
+  background: #e94560;
+  color: #fff;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #ff6b6b;
+}
+
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

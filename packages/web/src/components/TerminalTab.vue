@@ -17,7 +17,7 @@ import { useTerminalStore } from '../stores/terminal';
 import type { Tab } from '../stores/terminal';
 import 'xterm/css/xterm.css';
 
-const props = defineProps<{ tab: Tab; visible: boolean }>();
+const props = defineProps<{ tab: Tab; visible: boolean; autoExecuteCommands?: string[] }>();
 
 const terminalRef = ref<HTMLElement>();
 const status = ref<'connecting' | 'connected' | 'disconnected'>('connecting');
@@ -30,6 +30,15 @@ let sessionId: string | null = null;
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const terminalStore = useTerminalStore();
+
+// Constants for command execution timing
+const PROMPT_WAIT_INTERVAL = 500; // ms
+const PROMPT_WAIT_MAX_ATTEMPTS = 20; // 10 seconds total
+const COMMAND_SEND_DELAY = 300; // ms
+const COMMAND_START_DELAY = 500; // ms
+
+// Execution state for cancellation
+let shouldAbortExecution = false;
 
 onMounted(() => {
   initTerminal();
@@ -64,6 +73,21 @@ function initTerminal() {
   fitAddon.fit();
 
   terminal.onData((data) => {
+    // Capture command when user presses Enter
+    if ((data === '\r' || data === '\n') && terminal) {
+      // Get current line content from terminal buffer
+      const buffer = terminal.buffer.active;
+      const currentLine = buffer.getLine(buffer.cursorY + buffer.baseY);
+      if (currentLine) {
+        const lineText = currentLine.translateToString(true);
+        // Remove prompt prefix (PS C:\path> format)
+        const commandMatch = lineText.match(/^PS\s+[^>]*>\s*(.*)$/);
+        const commandText = commandMatch ? commandMatch[1] : lineText;
+        if (commandText.trim()) {
+          terminalStore.captureCommand(commandText);
+        }
+      }
+    }
     sendInput(data);
   });
 
@@ -175,6 +199,10 @@ function handleWsMessage(msg: any) {
         if (sessionId) {
           terminalStore.updateTabSessionId(props.tab.id, sessionId);
         }
+        // Auto-execute commands if provided
+        if (props.autoExecuteCommands && props.autoExecuteCommands.length > 0) {
+          executeCommandsSequentially(props.autoExecuteCommands);
+        }
       }
       break;
     case 'session:resumed':
@@ -206,7 +234,61 @@ function handleWsMessage(msg: any) {
   }
 }
 
+// Check if terminal prompt is ready (PowerShell: PS ...>)
+function isPromptReady(): boolean {
+  if (!terminal) return false;
+  const buffer = terminal.buffer.active;
+  const lastLine = buffer.getLine(buffer.length - 1);
+  if (!lastLine) return false;
+  const lineText = lastLine.translateToString(true).trim();
+  // Match PowerShell prompt: PS followed by path and >
+  return /^PS\s+.+>\s*$/.test(lineText);
+}
+
+// Execute commands sequentially, waiting for prompt between each
+async function executeCommandsSequentially(commands: string[]) {
+  if (!terminal || commands.length === 0) return;
+
+  shouldAbortExecution = false;
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  for (const command of commands) {
+    // Check if we should abort (component unmounted)
+    if (shouldAbortExecution || !terminal) {
+      console.log('Command execution aborted');
+      break;
+    }
+
+    // Wait for prompt to be ready
+    let attempts = 0;
+    while (!isPromptReady() && attempts < PROMPT_WAIT_MAX_ATTEMPTS && !shouldAbortExecution) {
+      await delay(PROMPT_WAIT_INTERVAL);
+      attempts++;
+    }
+
+    if (shouldAbortExecution || !terminal || !isPromptReady()) {
+      console.warn('Prompt not ready or execution aborted, skipping remaining commands');
+      break;
+    }
+
+    // Small delay before sending command
+    await delay(COMMAND_SEND_DELAY);
+
+    if (shouldAbortExecution || !terminal) break;
+
+    // Send the command
+    sendInput(command + '\r');
+
+    // Wait a bit for command to start executing
+    await delay(COMMAND_START_DELAY);
+  }
+}
+
 function cleanup() {
+  // Abort any pending command execution
+  shouldAbortExecution = true;
+
   // Don't close the session when navigating away - let it persist for resume
   // Only close the WebSocket without sending session:close
   if (ws) {
@@ -216,6 +298,11 @@ function cleanup() {
   }
   terminal?.dispose();
 }
+
+// Expose method for parent component to trigger command execution
+defineExpose({
+  executeCommands: executeCommandsSequentially,
+});
 </script>
 
 <style scoped>

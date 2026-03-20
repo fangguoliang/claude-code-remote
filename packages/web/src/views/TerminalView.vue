@@ -405,6 +405,8 @@ function executeShortcut(shortcut: typeof shortcuts.value[0]) {
     return;
   }
 
+  console.log('[TerminalView] Executing shortcut:', shortcut.name, 'commands:', shortcut.commands);
+
   // Create new terminal with auto-execute commands
   const now = Date.now();
   const tabId = 'tab-' + now + '-' + Math.random().toString(36).slice(2, 11);

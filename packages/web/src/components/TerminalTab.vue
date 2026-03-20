@@ -32,11 +32,11 @@ const settingsStore = useSettingsStore();
 const terminalStore = useTerminalStore();
 
 // Constants for command execution timing
-const PROMPT_WAIT_INTERVAL = 500; // ms
-const PROMPT_WAIT_MAX_ATTEMPTS = 20; // 10 seconds total
-const COMMAND_SEND_DELAY = 300; // ms
-const COMMAND_START_DELAY = 500; // ms
-const TERMINAL_INIT_DELAY = 1500; // ms - wait for terminal to initialize
+const PROMPT_WAIT_INTERVAL = 100; // ms
+const PROMPT_WAIT_MAX_ATTEMPTS = 20; // 2 seconds total
+const COMMAND_SEND_DELAY = 100; // ms
+const COMMAND_START_DELAY = 100; // ms
+const TERMINAL_INIT_DELAY = 400; // ms - wait for terminal to initialize and receive output
 
 // Execution state for cancellation
 let shouldAbortExecution = false;
@@ -221,9 +221,11 @@ function handleWsMessage(msg: any) {
       }
       break;
     case 'session:started':
+      console.log('[TerminalTab] session:started received, autoExecuteCommands:', props.autoExecuteCommands);
       status.value = 'connected';
       // Auto-execute commands after PTY is ready
       if (props.autoExecuteCommands && props.autoExecuteCommands.length > 0) {
+        console.log('[TerminalTab] Starting command execution...');
         executeCommandsSequentially(props.autoExecuteCommands);
       }
       break;
@@ -243,8 +245,10 @@ function isPromptReady(): boolean {
   const lastLine = buffer.getLine(buffer.length - 1);
   if (!lastLine) return false;
   const lineText = lastLine.translateToString(true).trim();
+  console.log('[TerminalTab] Checking prompt, lineText:', JSON.stringify(lineText));
   // Match PowerShell prompt: PS followed by path and >
-  return /^PS\s+.+>\s*$/.test(lineText);
+  // Also accept just PS> or lines ending with >
+  return /^PS\s*.*>\s*$/.test(lineText) || lineText.endsWith('>');
 }
 
 // Execute commands sequentially, waiting for prompt between each
@@ -256,26 +260,35 @@ async function executeCommandsSequentially(commands: string[]) {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Wait for terminal to initialize and show first prompt
-  console.log('Waiting for terminal initialization...');
+  console.log('[TerminalTab] Waiting for terminal initialization...');
   await delay(TERMINAL_INIT_DELAY);
 
-  for (const command of commands) {
+  console.log('[TerminalTab] Terminal init wait complete, checking prompt...');
+
+  for (let i = 0; i < commands.length; i++) {
+    const command = commands[i];
     // Check if we should abort (component unmounted)
     if (shouldAbortExecution || !terminal) {
-      console.log('Command execution aborted');
+      console.log('[TerminalTab] Command execution aborted');
       break;
     }
 
     // Wait for prompt to be ready
     let attempts = 0;
     while (!isPromptReady() && attempts < PROMPT_WAIT_MAX_ATTEMPTS && !shouldAbortExecution) {
+      console.log(`[TerminalTab] Waiting for prompt, attempt ${attempts + 1}/${PROMPT_WAIT_MAX_ATTEMPTS}`);
       await delay(PROMPT_WAIT_INTERVAL);
       attempts++;
     }
 
-    if (shouldAbortExecution || !terminal || !isPromptReady()) {
-      console.warn('Prompt not ready or execution aborted, skipping remaining commands');
+    if (shouldAbortExecution || !terminal) {
+      console.log('[TerminalTab] Execution aborted');
       break;
+    }
+
+    if (!isPromptReady()) {
+      // If prompt still not ready after max attempts, just send command anyway
+      console.warn('[TerminalTab] Prompt not ready after max attempts, sending command anyway');
     }
 
     // Small delay before sending command
@@ -283,12 +296,14 @@ async function executeCommandsSequentially(commands: string[]) {
 
     if (shouldAbortExecution || !terminal) break;
 
-    console.log('Executing command:', command);
+    console.log(`[TerminalTab] Executing command ${i + 1}/${commands.length}:`, command);
     sendInput(command + '\r');
 
     // Wait a bit for command to start executing
     await delay(COMMAND_START_DELAY);
   }
+
+  console.log('[TerminalTab] Command execution complete');
 }
 
 function cleanup() {

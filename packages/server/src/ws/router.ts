@@ -68,8 +68,10 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
 
     case 'session:started':
       // Agent 确认会话已启动，转发到浏览器
+      console.log(`[router] session:started received, sessionId: ${sessionId}`);
       if (sessionId) {
-        tunnelManager.routeToBrowser(sessionId, message);
+        const result = tunnelManager.routeToBrowser(sessionId, message);
+        console.log(`[router] session:started routed to browser: ${result}`);
       }
       break;
 

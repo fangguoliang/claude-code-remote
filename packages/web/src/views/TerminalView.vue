@@ -726,14 +726,13 @@ onUnmounted(() => {
 .bottom-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0.4rem 0.3rem;
+  padding: 0.4rem 0.5rem;
   background: #16213e;
   gap: 0.3rem;
 }
 
 .spacer {
-  width: 0.5rem;
+  flex: 1;
 }
 
 .key-btn {
@@ -760,6 +759,7 @@ onUnmounted(() => {
 }
 
 .tab-btn {
+  width: 60px;
   font-weight: bold;
   font-size: 0.8rem;
 }

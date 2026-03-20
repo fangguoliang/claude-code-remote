@@ -195,15 +195,11 @@ function handleWsMessage(msg: any) {
     case 'session:created':
       if (msg.payload.success) {
         sessionId = msg.payload.sessionId;
-        status.value = 'connected';
         // Update the tab with the sessionId for persistence
         if (sessionId) {
           terminalStore.updateTabSessionId(props.tab.id, sessionId);
         }
-        // Auto-execute commands if provided
-        if (props.autoExecuteCommands && props.autoExecuteCommands.length > 0) {
-          executeCommandsSequentially(props.autoExecuteCommands);
-        }
+        // Don't execute commands here - wait for session:started
       }
       break;
     case 'session:resumed':
@@ -225,6 +221,11 @@ function handleWsMessage(msg: any) {
       }
       break;
     case 'session:started':
+      status.value = 'connected';
+      // Auto-execute commands after PTY is ready
+      if (props.autoExecuteCommands && props.autoExecuteCommands.length > 0) {
+        executeCommandsSequentially(props.autoExecuteCommands);
+      }
       break;
     case 'session:output':
       terminal?.write(msg.payload.data);

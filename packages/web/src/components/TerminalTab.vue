@@ -29,6 +29,8 @@ let serializeAddon: SerializeAddon | null = null;
 let ws: WebSocket | null = null;
 let sessionId: string | null = null;
 let saveScrollbackTimer: number | null = null;
+let terminalInitialized = false; // Track if terminal has been initialized
+let shouldSendResize = true; // Control whether to send resize to server
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -45,7 +47,11 @@ const TERMINAL_INIT_DELAY = 400; // ms - wait for terminal to initialize and rec
 let shouldAbortExecution = false;
 
 onMounted(() => {
-  initTerminal();
+  // Only initialize terminal if this tab is visible
+  // If not visible, it will be initialized when it becomes visible
+  if (props.visible) {
+    initTerminal();
+  }
 });
 
 onUnmounted(() => {
@@ -56,40 +62,38 @@ onUnmounted(() => {
 });
 
 watch(() => props.visible, (visible, wasVisible) => {
+  // Initialize terminal when becoming visible for the first time
+  if (visible && !terminalInitialized) {
+    initTerminal();
+    return; // initTerminal will handle the fit and scroll
+  }
+
   // Save scrollback when leaving this tab
   if (wasVisible && !visible) {
     saveScrollback();
   }
   // Fit and scroll to bottom when switching back to this tab
-  if (visible && fitAddon && terminalRef.value) {
+  if (visible && terminal) {
+    // Log terminal buffer size before fit
+    const buffer = terminal.buffer.active;
+    console.log(`[TerminalTab] Before fit - ${props.tab.id}: cols=${terminal.cols}, rows=${terminal.rows}, buffer length=${buffer.length}`);
+
     // Use requestAnimationFrame for better timing after v-show
     requestAnimationFrame(() => {
-      if (!terminal || !fitAddon) return;
-      fitAddon.fit();
+      if (!terminal) return;
+      safeFit();
 
-      // Use multiple frames to ensure DOM and terminal state are synced
+      // Log terminal buffer size after fit
+      console.log(`[TerminalTab] After fit - ${props.tab.id}: cols=${terminal.cols}, rows=${terminal.rows}`);
+
       requestAnimationFrame(() => {
-        if (!terminal) return;
-        // Force terminal to recalculate its dimensions
-        terminal.scrollToBottom();
+        terminal?.scrollToBottom();
 
-        // Additional scroll attempt after a short delay
+        // Additional fit attempt after a short delay
         setTimeout(() => {
-          if (!terminal || !fitAddon) return;
-          fitAddon.fit();
-          terminal.scrollToBottom();
-
-          // Check if viewport is compressed (keyboard open) and refit
-          const isKeyboardOpen = window.visualViewport && window.visualViewport.height < window.innerHeight;
-          if (isKeyboardOpen) {
-            setTimeout(() => {
-              fitAddon?.fit();
-              terminal?.scrollToBottom();
-              tryFocus();
-            }, 100);
-          } else {
-            tryFocus();
-          }
+          safeFit();
+          terminal?.scrollToBottom();
+          tryFocus();
         }, 100);
       });
     });
@@ -106,8 +110,27 @@ function tryFocus(attempts = 0) {
   }
 }
 
+// Safely fit terminal - only when tab is visible and container has valid size
+function safeFit() {
+  if (!props.visible || !terminal || !fitAddon || !terminalRef.value) return;
+
+  const rect = terminalRef.value.getBoundingClientRect();
+  // Skip fit if container has no valid dimensions (hidden or not rendered)
+  if (rect.width <= 0 || rect.height <= 0) {
+    console.log(`[TerminalTab] Skipping fit - container has no dimensions: ${rect.width}x${rect.height}`);
+    return;
+  }
+
+  console.log(`[TerminalTab] Fitting terminal ${props.tab.id}, container: ${rect.width}x${rect.height}`);
+  shouldSendResize = true;
+  fitAddon.fit();
+}
+
 function initTerminal() {
   if (!terminalRef.value) return;
+
+  terminalInitialized = true;
+  console.log(`[TerminalTab] Initializing terminal for ${props.tab.id}`);
 
   terminal = new Terminal({
     fontFamily: settingsStore.settings.fontFamily,
@@ -128,12 +151,22 @@ function initTerminal() {
   terminal.loadAddon(new WebLinksAddon());
   terminal.loadAddon(serializeAddon);
   terminal.open(terminalRef.value);
-  fitAddon.fit();
+
+  // Delay initial fit to ensure DOM is rendered
+  setTimeout(() => {
+    safeFit();
+    // Start WebSocket connection after terminal is ready
+    connectWebSocket();
+  }, 50);
 
   // Restore scrollback from sessionStorage if exists
   const savedScrollback = sessionStorage.getItem(`scrollback:${props.tab.id}`);
   if (savedScrollback && terminal) {
+    const lineCount = savedScrollback.split('\n').length;
+    console.log(`[TerminalTab] Restoring scrollback for ${props.tab.id}: ${savedScrollback.length} chars, ~${lineCount} lines`);
     terminal.write(savedScrollback);
+  } else {
+    console.log(`[TerminalTab] No saved scrollback for ${props.tab.id}`);
   }
 
   // Start periodic scrollback save
@@ -167,7 +200,9 @@ function initTerminal() {
   });
 
   terminal.onResize(({ cols, rows }) => {
-    if (ws && sessionId) {
+    // Only send resize to server if allowed (tab is visible)
+    // This prevents sending incorrect sizes when tab is hidden
+    if (shouldSendResize && ws && sessionId) {
       ws.send(JSON.stringify({ type: 'session:resize', sessionId, payload: { cols, rows }, timestamp: Date.now() }));
     }
   });
@@ -184,8 +219,6 @@ function initTerminal() {
   terminalStore.registerTabScroller(props.tab.id, () => {
     terminal?.scrollToBottom();
   });
-
-  connectWebSocket();
 }
 
 // Send input to the terminal
@@ -387,10 +420,15 @@ function setupVisualViewportHandling() {
   if (!('visualViewport' in window)) return;
 
   const handleViewportChange = () => {
-    if (fitAddon && terminalRef.value) {
+    // Only fit if this tab is visible
+    if (!props.visible) return;
+
+    if (props.visible && terminal) {
       // Delay to let the layout settle
       setTimeout(() => {
-        fitAddon?.fit();
+        // Double check visibility after timeout
+        if (!props.visible) return;
+        safeFit();
         // Scroll cursor into view after resize
         terminal?.scrollToBottom();
       }, 100);
@@ -485,6 +523,8 @@ function saveScrollback() {
   if (terminal && serializeAddon && props.tab.id) {
     try {
       const serialized = serializeAddon.serialize();
+      const lineCount = serialized.split('\n').length;
+      console.log(`[TerminalTab] Saving scrollback for ${props.tab.id}: ${serialized.length} chars, ~${lineCount} lines`);
       sessionStorage.setItem(`scrollback:${props.tab.id}`, serialized);
     } catch (e) {
       console.error('[TerminalTab] Failed to save scrollback:', e);

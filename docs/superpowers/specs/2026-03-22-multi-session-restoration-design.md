@@ -20,7 +20,7 @@ Modify the restoration logic to restore ALL tabs instead of just one.
 
 ### 1. terminal.ts - Add new functions
 
-Add two new functions to retrieve all restorable tabs:
+Add three new functions to support multi-session restoration:
 
 ```typescript
 // Get all session tabs for multi-session restoration (page refresh)
@@ -32,6 +32,12 @@ function getAllSessionTabs(): Tab[] {
 // Get all history tabs for multi-session restoration (login)
 function getAllHistoryTabsForRestore(): Tab[] {
   return historyTabs.value;
+}
+
+// Get the stored active tab ID (for preserving active tab after restoration)
+function getStoredActiveTabId(): string | null {
+  const session = loadSessionData();
+  return session?.activeTabId || null;
 }
 ```
 
@@ -45,18 +51,25 @@ Replace the current single-tab restoration with multi-tab restoration:
 function restoreLastSession() {
   // Priority: 1) sessionStorage (page refresh), 2) localStorage history (login)
   let tabsToRestore = terminalStore.getAllSessionTabs();
+  let activeIdToRestore: string | null = null;
 
   if (tabsToRestore.length === 0) {
     tabsToRestore = terminalStore.getAllHistoryTabsForRestore();
+  } else {
+    // Get the active tab ID from sessionStorage (only for page refresh scenario)
+    activeIdToRestore = terminalStore.getStoredActiveTabId();
   }
 
   if (tabsToRestore.length === 0) return;
 
+  // Restore all tabs
   for (const tab of tabsToRestore) {
-    const agent = agents.value.find(a => a.agentId === tab.agentId);
-    // Restore tab regardless of agent online status
-    // TerminalTab will show "disconnected" state for offline agents
     terminalStore.restoreTab(tab);
+  }
+
+  // Restore correct active tab (the last restoreTab() sets it to that tab)
+  if (activeIdToRestore && tabsToRestore.some(t => t.id === activeIdToRestore)) {
+    terminalStore.setActiveTab(activeIdToRestore);
   }
 }
 ```
@@ -86,6 +99,7 @@ The existing implementation already handles offline agents:
 
 ## Implementation Notes
 
-- The `activeTabId` from sessionStorage is preserved, so the correct tab remains active after restoration
+- The `activeTabId` is explicitly restored from sessionStorage after all tabs are restored
+- `restoreTab()` sets `activeTabId` to each restored tab, so we must call `setActiveTab()` at the end
 - `restoreTab()` already checks for duplicate tabs by `sessionId`, preventing duplicates
 - History tabs are kept in localStorage (max 10), providing reasonable limit for restoration

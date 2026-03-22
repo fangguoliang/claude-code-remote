@@ -75,6 +75,26 @@ export async function authRoutes(fastify: FastifyInstance) {
     };
   });
 
+  // 修改密码
+  fastify.post('/api/auth/change-password', async (request, reply) => {
+    const { username, oldPassword, newPassword } = request.body as {
+      username: string;
+      oldPassword: string;
+      newPassword: string;
+    };
+
+    if (!username || !oldPassword || !newPassword) {
+      return reply.status(400).send({ error: '所有字段必填' });
+    }
+
+    try {
+      await authService.changePassword(username, oldPassword, newPassword);
+      return { success: true };
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
+    }
+  });
+
   // 登出
   fastify.post('/api/auth/logout', async (request, reply) => {
     const { refreshToken } = request.body as { refreshToken: string };

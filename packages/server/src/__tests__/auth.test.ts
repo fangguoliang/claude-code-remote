@@ -135,4 +135,76 @@ describe('Authentication', () => {
       expect(response.statusCode).toBe(401);
     });
   });
+
+  describe('POST /api/auth/change-password', () => {
+    it('should change password with valid old password', async () => {
+      const fastify = await buildServer();
+
+      // Register user
+      await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/register',
+        payload: { username: 'changepwd', password: 'oldpass123' },
+      });
+
+      // Change password
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/change-password',
+        payload: { username: 'changepwd', oldPassword: 'oldpass123', newPassword: 'newpass123' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+
+      // Verify can login with new password
+      const loginResponse = await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { username: 'changepwd', password: 'newpass123' },
+      });
+      expect(loginResponse.statusCode).toBe(200);
+    });
+
+    it('should reject wrong old password', async () => {
+      const fastify = await buildServer();
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/register',
+        payload: { username: 'changepwd2', password: 'oldpass123' },
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/change-password',
+        payload: { username: 'changepwd2', oldPassword: 'wrongpass', newPassword: 'newpass123' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('旧密码错误');
+    });
+
+    it('should reject short new password', async () => {
+      const fastify = await buildServer();
+
+      await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/register',
+        payload: { username: 'changepwd3', password: 'oldpass123' },
+      });
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/auth/change-password',
+        payload: { username: 'changepwd3', oldPassword: 'oldpass123', newPassword: 'short' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('密码至少6个字符');
+    });
+  });
 });

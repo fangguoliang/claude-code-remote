@@ -343,6 +343,64 @@ function setupTouchHandling() {
   if (xterm) {
     xterm.style.touchAction = 'pan-y';
   }
+
+  // Momentum scroll implementation
+  let lastY = 0;
+  let lastTime = 0;
+  let velocity = 0;
+  let animationId: number | null = null;
+
+  wrapper.addEventListener('touchstart', (e: TouchEvent) => {
+    lastY = e.touches[0].clientY;
+    lastTime = Date.now();
+    velocity = 0;
+    // Stop any ongoing momentum scroll
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }, { passive: true });
+
+  wrapper.addEventListener('touchmove', (e: TouchEvent) => {
+    const currentY = e.touches[0].clientY;
+    const currentTime = Date.now();
+    const deltaY = lastY - currentY;
+    const deltaTime = currentTime - lastTime;
+
+    if (deltaTime > 0) {
+      velocity = deltaY / deltaTime;
+    }
+
+    lastY = currentY;
+    lastTime = currentTime;
+  }, { passive: true });
+
+  wrapper.addEventListener('touchend', () => {
+    // Apply momentum scroll based on velocity
+    if (Math.abs(velocity) > 0.5 && viewport && terminal) {
+      const friction = 0.95;
+      const minVelocity = 0.1;
+
+      const momentumScroll = () => {
+        if (Math.abs(velocity) < minVelocity || !viewport || !terminal) {
+          animationId = null;
+          return;
+        }
+
+        // Calculate scroll amount based on velocity
+        const scrollAmount = Math.round(velocity * 16); // 16ms per frame
+        const currentScroll = viewport.scrollTop;
+        viewport.scrollTop = currentScroll + scrollAmount;
+
+        // Apply friction
+        velocity *= friction;
+
+        animationId = requestAnimationFrame(momentumScroll);
+      };
+
+      animationId = requestAnimationFrame(momentumScroll);
+    }
+  }, { passive: true });
 }
 
 // Save scrollback to sessionStorage

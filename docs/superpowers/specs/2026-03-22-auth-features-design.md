@@ -23,7 +23,7 @@
 
 | 方法 | 路径 | 描述 | 权限 |
 |------|------|------|------|
-| POST | `/api/auth/change-password` | 修改自己的密码 | 已登录用户 |
+| POST | `/api/auth/change-password` | 修改自己的密码 | 无需 JWT，通过旧密码验证 |
 | GET | `/api/admin/users` | 获取所有用户列表 | 仅 admin |
 | POST | `/api/admin/users` | 创建新用户 | 仅 admin |
 | POST | `/api/admin/reset-password` | 重置用户密码 | 仅 admin |
@@ -32,9 +32,12 @@
 
 #### POST /api/auth/change-password
 
+此端点在登录页使用，无需 JWT。通过用户名和旧密码验证身份。
+
 请求:
 ```json
 {
+  "username": "string",
   "oldPassword": "string",
   "newPassword": "string"
 }
@@ -45,7 +48,7 @@
 { "success": true }
 ```
 
-错误: 旧密码错误、密码太短
+错误: 用户不存在、旧密码错误、密码太短
 
 #### GET /api/admin/users
 

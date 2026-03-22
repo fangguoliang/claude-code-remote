@@ -222,29 +222,33 @@ onMounted(() => {
   intervalId = window.setInterval(loadAgents, 5000);
 });
 
-// Restore last session if agent is online
-// Priority: 1) sessionStorage session (page refresh), 2) localStorage history (new login)
+// Restore all sessions from storage
+// Priority: 1) sessionStorage (page refresh), 2) localStorage history (login)
 function restoreLastSession() {
-  // First try to restore from sessionStorage (page refresh scenario)
-  let lastTab = terminalStore.getLastActiveTab();
+  // Priority: 1) sessionStorage (page refresh), 2) localStorage history (login)
+  let tabsToRestore = terminalStore.getAllSessionTabs();
+  let activeIdToRestore: string | null = null;
 
-  // If no session, try to restore from history (new login scenario)
-  if (!lastTab) {
-    lastTab = terminalStore.getLastHistoryTab();
-  }
-
-  if (!lastTab) return;
-
-  const agent = agents.value.find(a => a.agentId === lastTab.agentId);
-  if (agent?.online) {
-    // Restore existing tab (don't create new history entry)
-    terminalStore.restoreTab(lastTab);
-    console.log('Restored session for agent:', lastTab.agentId, 'sessionId:', lastTab.sessionId);
+  if (tabsToRestore.length === 0) {
+    tabsToRestore = terminalStore.getAllHistoryTabsForRestore();
   } else {
-    // Agent offline, just clear current session (keep history)
-    terminalStore.clearCurrentSession();
-    console.log('Agent offline:', lastTab.agentId);
+    // Get the active tab ID from sessionStorage (only for page refresh scenario)
+    activeIdToRestore = terminalStore.getStoredActiveTabId();
   }
+
+  if (tabsToRestore.length === 0) return;
+
+  // Restore all tabs
+  for (const tab of tabsToRestore) {
+    terminalStore.restoreTab(tab);
+  }
+
+  // Restore correct active tab (the last restoreTab() sets it to that tab)
+  if (activeIdToRestore && tabsToRestore.some(t => t.id === activeIdToRestore)) {
+    terminalStore.setActiveTab(activeIdToRestore);
+  }
+
+  console.log('Restored', tabsToRestore.length, 'sessions');
 }
 
 onUnmounted(() => {

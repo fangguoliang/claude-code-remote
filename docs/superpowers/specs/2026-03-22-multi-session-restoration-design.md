@@ -41,11 +41,24 @@ function getStoredActiveTabId(): string | null {
 }
 ```
 
-Export these functions in the store's return statement (add to the return object around line 437-468).
+Export these functions in the store's return statement (add to the return object around line 437-468):
+
+```typescript
+return {
+  // ... existing exports ...
+  getAllSessionTabs,
+  getAllHistoryTabsForRestore,
+  getStoredActiveTabId,
+};
+```
 
 ### 2. TerminalView.vue - Modify restoreLastSession()
 
-Replace the current single-tab restoration with multi-tab restoration:
+Replace the current single-tab restoration with multi-tab restoration.
+
+**Important:** Remove the `agent?.online` check from the current implementation. Tabs are now restored regardless of agent status, and offline agents will show "disconnected" state in TerminalTab.vue.
+
+**Call timing:** The `restoreLastSession()` call must remain inside `loadAgents().then()` to ensure agents are loaded before restoration.
 
 ```typescript
 function restoreLastSession() {
@@ -109,6 +122,7 @@ User confirmed: When an agent is offline, the tab should still be restored and s
 
 - The `activeTabId` is explicitly restored from sessionStorage after all tabs are restored
 - `restoreTab()` sets `activeTabId` to each restored tab, so we must call `setActiveTab()` at the end
-- `restoreTab()` already checks for duplicate tabs by `sessionId` (line 216-220), preventing duplicates if called multiple times
+- `restoreTab()` already checks for duplicate tabs by `sessionId` (lines 216-221), preventing duplicates if called multiple times
 - History tabs are kept in localStorage (max 10), providing reasonable limit for restoration
 - The current behavior clears session if agent is offline (lines 244-247 in TerminalView.vue) - this will be removed since we now restore all tabs regardless of agent status
+- `getAllHistoryTabsForRestore()` returns `historyTabs.value` (reactive array reference) which is safe since `restoreTab()` does not mutate the input tab object

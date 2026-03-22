@@ -11,6 +11,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SerializeAddon } from '@xterm/addon-serialize';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
 import { useTerminalStore } from '../stores/terminal';
@@ -24,8 +25,10 @@ const status = ref<'connecting' | 'connected' | 'disconnected'>('connecting');
 
 let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
+let serializeAddon: SerializeAddon | null = null;
 let ws: WebSocket | null = null;
 let sessionId: string | null = null;
+let saveScrollbackTimer: number | null = null;
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -65,13 +68,31 @@ function initTerminal() {
     fontFamily: settingsStore.settings.fontFamily,
     fontSize: settingsStore.settings.fontSize,
     theme: { background: '#1a1a2e', foreground: '#e0e0e0', cursor: '#e94560' },
+    scrollback: 10000,
+    scrollSensitivity: 30,
   });
 
   fitAddon = new FitAddon();
+  serializeAddon = new SerializeAddon();
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(new WebLinksAddon());
+  terminal.loadAddon(serializeAddon);
   terminal.open(terminalRef.value);
   fitAddon.fit();
+
+  // Restore scrollback from sessionStorage if exists
+  const savedScrollback = sessionStorage.getItem(`scrollback:${props.tab.id}`);
+  if (savedScrollback && terminal) {
+    terminal.write(savedScrollback);
+  }
+
+  // Start periodic scrollback save
+  saveScrollbackTimer = window.setInterval(() => {
+    saveScrollback();
+  }, 5000); // Save every 5 seconds
+
+  // Setup touch event handling for pull-to-refresh prevention
+  setupTouchHandling();
 
   terminal.onData((data) => {
     // Capture command when user presses Enter
@@ -306,9 +327,48 @@ async function executeCommandsSequentially(commands: string[]) {
   console.log('[TerminalTab] Command execution complete');
 }
 
+// Setup touch handling to prevent pull-to-refresh
+function setupTouchHandling() {
+  if (!terminalRef.value) return;
+
+  const wrapper = terminalRef.value;
+  wrapper.style.touchAction = 'pan-y';
+
+  const viewport = wrapper.querySelector('.xterm-viewport') as HTMLElement;
+  if (viewport) {
+    viewport.style.touchAction = 'pan-y';
+  }
+
+  const xterm = wrapper.querySelector('.xterm') as HTMLElement;
+  if (xterm) {
+    xterm.style.touchAction = 'pan-y';
+  }
+}
+
+// Save scrollback to sessionStorage
+function saveScrollback() {
+  if (terminal && serializeAddon && props.tab.id) {
+    try {
+      const serialized = serializeAddon.serialize();
+      sessionStorage.setItem(`scrollback:${props.tab.id}`, serialized);
+    } catch (e) {
+      console.error('[TerminalTab] Failed to save scrollback:', e);
+    }
+  }
+}
+
 function cleanup() {
   // Abort any pending command execution
   shouldAbortExecution = true;
+
+  // Stop scrollback save timer
+  if (saveScrollbackTimer) {
+    clearInterval(saveScrollbackTimer);
+    saveScrollbackTimer = null;
+  }
+
+  // Save scrollback before cleanup
+  saveScrollback();
 
   // Don't close the session when navigating away - let it persist for resume
   // Only close the WebSocket without sending session:close
@@ -331,18 +391,15 @@ defineExpose({
   position: absolute;
   inset: 0;
   touch-action: pan-y;
-  overscroll-behavior: contain;
 }
 .terminal { width: 100%; height: 100%; }
 .status-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(26, 26, 46, 0.9); color: #e0e0e0; }
 .status-overlay.error { color: #e94560; }
 
-/* xterm.js 滚动优化 */
-.terminal-wrapper :deep(.xterm) {
+/* Prevent pull-to-refresh on all xterm elements */
+.terminal-wrapper :deep(.xterm),
+.terminal-wrapper :deep(.xterm-viewport),
+.terminal-wrapper :deep(.xterm-screen) {
   touch-action: pan-y;
-}
-.terminal-wrapper :deep(.xterm-viewport) {
-  touch-action: pan-y;
-  overscroll-behavior: contain;
 }
 </style>

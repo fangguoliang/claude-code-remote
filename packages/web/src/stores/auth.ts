@@ -111,5 +111,18 @@ export const useAuthStore = defineStore('auth', () => {
     return false;
   }
 
-  return { accessToken, refreshToken, userId, username, isAuthenticated, setTokens, clearTokens, login, refresh, checkAndInitSession, updateLastActivity };
+  async function changePassword(username: string, oldPassword: string, newPassword: string, apiUrl: string) {
+    const response = await fetch(`${apiUrl}/api/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, oldPassword, newPassword }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      return true;
+    }
+    throw new Error(data.error || '修改密码失败');
+  }
+
+  return { accessToken, refreshToken, userId, username, isAuthenticated, setTokens, clearTokens, login, refresh, checkAndInitSession, updateLastActivity, changePassword };
 });

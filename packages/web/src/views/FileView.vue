@@ -89,15 +89,9 @@
         @keyup.enter="goToPath"
       />
       <button class="action-btn" @click="goToPath">Go</button>
-      <button class="action-btn" @click="triggerUpload">
-        <span>^</span> Upload
-      </button>
-      <button class="action-btn" @click="refresh">
-        <span>~</span> Refresh
-      </button>
-      <button class="action-btn save-btn" @click="openSaveModal" :disabled="!currentPath">
-        <span>📍</span> 保存
-      </button>
+      <button class="icon-btn" @click="triggerUpload" title="上传">↑</button>
+      <button class="icon-btn" @click="refresh" title="刷新">↻</button>
+      <button class="icon-btn save-icon-btn" @click="openSaveModal" :disabled="!currentPath" title="保存快捷方式">☆</button>
     </div>
 
     <!-- Hidden File Input -->
@@ -623,7 +617,7 @@ watch(onlineAgents, (newOnlineAgents) => {
 
 .action-bar {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   padding: 12px 16px;
   background: #16162a;
@@ -631,9 +625,8 @@ watch(onlineAgents, (newOnlineAgents) => {
 }
 
 .path-input {
-  flex: 1 1 120px;
-  min-width: 80px;
-  max-width: 200px;
+  flex: 1;
+  min-width: 60px;
   padding: 12px;
   background: #2a2a4e;
   border: 1px solid #444;
@@ -647,15 +640,14 @@ watch(onlineAgents, (newOnlineAgents) => {
 }
 
 .action-btn {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   padding: 12px 16px;
+  height: 44px;
   background: #2a2a4e;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
   color: #fff;
   font-size: 14px;
   cursor: pointer;
@@ -664,6 +656,10 @@ watch(onlineAgents, (newOnlineAgents) => {
 
 .action-btn:hover {
   background: #3a3a5e;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
 }
 
 .footer-bar {
@@ -729,18 +725,49 @@ watch(onlineAgents, (newOnlineAgents) => {
   color: #e94560;
 }
 
-/* Save button */
-.save-btn {
+/* Icon buttons (Upload, Refresh, Save) */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #252547;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: #3a3a5e;
+}
+
+.icon-btn:active {
+  background: #e94560;
+  transform: scale(0.95);
+}
+
+.save-icon-btn {
   background: #e94560;
 }
 
-.save-btn:hover:not(:disabled) {
+.save-icon-btn:hover:not(:disabled) {
   background: #ff6b6b;
 }
 
-.save-btn:disabled {
+.save-icon-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.save-icon-btn:active:not(:disabled) {
+  background: #ff6b6b;
 }
 
 /* Modal styles */

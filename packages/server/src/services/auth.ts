@@ -65,4 +65,25 @@ export const authService = {
     if (parts.length !== 5) return null; // UUID format check
     return tokenValue;
   },
+
+  // 修改密码
+  async changePassword(username: string, oldPassword: string, newPassword: string) {
+    const user = userModel.findByUsername(username);
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    const valid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!valid) {
+      throw new Error('旧密码错误');
+    }
+
+    if (newPassword.length < 6) {
+      throw new Error('密码至少6个字符');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    userModel.updatePassword(username, passwordHash);
+    return true;
+  },
 };

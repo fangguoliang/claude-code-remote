@@ -137,7 +137,7 @@ function initTerminal() {
 
 // Send input to the terminal
 function sendInput(data: string) {
-  if (ws && sessionId) {
+  if (ws && sessionId && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'session:input', sessionId, payload: { data }, timestamp: Date.now() }));
   }
 }

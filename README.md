@@ -46,13 +46,24 @@ pnpm approve-builds
 ```bash
 cd packages/server
 cp .env.example .env
-# 编辑 .env 配置 JWT_SECRET
+# 编辑 .env 配置 JWT_SECRET 和 ADMIN_PASSWORD
 pnpm dev
 ```
 
 服务端将在端口 3000 启动，提供：
 - HTTP API: `http://localhost:3000/api/*`
 - WebSocket: `ws://localhost:3000/ws/browser`, `ws://localhost:3000/ws/agent`
+
+#### 环境变量说明
+
+| 变量 | 描述 | 默认值 |
+|------|------|--------|
+| PORT | 服务端口 | 3000 |
+| JWT_SECRET | JWT 签名密钥 | dev-secret-key |
+| DATABASE_PATH | SQLite 数据库路径 | ./data/ccremote.db |
+| ADMIN_PASSWORD | admin 用户初始密码 | admin |
+
+> **重要**: 生产环境请务必修改 `JWT_SECRET` 和 `ADMIN_PASSWORD`！
 
 ### 3. 启动 Agent (Windows)
 
@@ -93,7 +104,20 @@ pnpm dev
 | POST | /api/auth/login | 登录获取令牌 |
 | POST | /api/auth/refresh | 刷新访问令牌 |
 | POST | /api/auth/logout | 登出 |
+| POST | /api/auth/change-password | 修改密码 |
 | GET | /api/auth/me | 获取当前用户信息 |
+
+### 管理员 (仅 admin 用户)
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/admin/users | 获取用户列表 |
+| POST | /api/admin/users | 创建用户 |
+| POST | /api/admin/reset-password | 重置用户密码为用户名 |
+| POST | /api/admin/disable-user | 禁用用户 |
+| POST | /api/admin/enable-user | 启用用户 |
+| GET | /api/admin/user-status/:username | 查看用户状态 |
+| POST | /api/admin/delete-user | 删除用户 |
 
 ### 健康检查
 
@@ -205,6 +229,8 @@ nssm start CCremoteAgent
 - 主题和字体配置
 - 快捷键栏 (Esc, Tab, 方向键, Ctrl+C, Ctrl+L)
 - 自动重连
+- 用户管理 (admin 可创建/禁用/删除用户)
+- 修改密码功能
 
 ## 技术栈
 

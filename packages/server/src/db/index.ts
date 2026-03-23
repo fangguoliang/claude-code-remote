@@ -5,6 +5,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { join } from 'path';
 import { config } from '../config/index.js';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,6 +34,16 @@ export const initDatabase = async () => {
   // 初始化表结构
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
   db.run(schema);
+
+  // 创建默认 admin 用户（如果不存在）
+  const adminUser = userModel.findByUsername('admin');
+  if (!adminUser) {
+    const SALT_ROUNDS = 10;
+    const passwordHash = await bcrypt.hash(config.adminPassword, SALT_ROUNDS);
+    userModel.create('admin', passwordHash);
+    console.log('Created default admin user');
+  }
+
   console.log('Database initialized');
 };
 

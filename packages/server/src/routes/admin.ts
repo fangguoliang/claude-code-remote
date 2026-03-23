@@ -128,4 +128,48 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
     return { success: true };
   });
+
+  // Get user status
+  fastify.get('/api/admin/user-status/:username', {
+    preHandler: adminOnly
+  }, async (request, reply) => {
+    const { username } = request.params as { username: string };
+
+    const user = userModel.findByUsername(username);
+    if (!user) {
+      return reply.status(400).send({ error: '用户不存在' });
+    }
+
+    // Check if password equals username (enabled state)
+    const isEnabled = await bcrypt.compare(username, user.password_hash);
+
+    return {
+      username: user.username,
+      enabled: isEnabled,
+      createdAt: user.created_at,
+    };
+  });
+
+  // Enable user (reset password to username)
+  fastify.post('/api/admin/enable-user', {
+    preHandler: adminOnly
+  }, async (request, reply) => {
+    const { username } = request.body as { username: string };
+
+    if (!username) {
+      return reply.status(400).send({ error: '用户名必填' });
+    }
+
+    const user = userModel.findByUsername(username);
+    if (!user) {
+      return reply.status(400).send({ error: '用户不存在' });
+    }
+
+    // Reset password to username to enable
+    const SALT_ROUNDS = 10;
+    const passwordHash = await bcrypt.hash(username, SALT_ROUNDS);
+    userModel.updatePassword(username, passwordHash);
+
+    return { success: true };
+  });
 }

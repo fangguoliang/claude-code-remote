@@ -40,14 +40,22 @@
 
         <!-- User Action Buttons -->
         <div class="button-group">
-          <button @click="handleResetPassword" :disabled="!selectedUser || loading">
+          <button @click="handleResetPassword" :disabled="!selectedUser || loading" class="btn-sm">
             重置密码
           </button>
-          <button @click="handleDisableUser" :disabled="!selectedUser || loading" class="btn-warning">
+          <button @click="handleDisableUser" :disabled="!selectedUser || loading" class="btn-sm btn-warning">
             禁用
           </button>
-          <button @click="handleDeleteUser" :disabled="!selectedUser || loading" class="btn-danger">
+          <button @click="handleDeleteUser" :disabled="!selectedUser || loading" class="btn-sm btn-danger">
             删除
+          </button>
+        </div>
+        <div class="button-group">
+          <button @click="handleViewStatus" :disabled="!selectedUser || loading" class="btn-sm btn-info">
+            查看状态
+          </button>
+          <button @click="handleEnableUser" :disabled="!selectedUser || loading" class="btn-sm btn-success">
+            启用
           </button>
         </div>
         <p v-if="actionMessage" :class="actionError ? 'error' : 'success'">{{ actionMessage }}</p>
@@ -210,6 +218,65 @@ async function handleDeleteUser() {
   }
 }
 
+async function handleViewStatus() {
+  if (!selectedUser.value || !authStore.accessToken) return;
+
+  loading.value = true;
+  actionMessage.value = '';
+  actionError.value = false;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/user-status/${selectedUser.value}`, {
+      headers: { Authorization: `Bearer ${authStore.accessToken}` },
+    });
+    const data = await response.json();
+    if (data.username) {
+      const status = data.enabled ? '已启用' : '已禁用';
+      const date = new Date(data.createdAt).toLocaleString('zh-CN');
+      actionMessage.value = `用户: ${data.username}\n状态: ${status}\n创建时间: ${date}`;
+    } else {
+      actionError.value = true;
+      actionMessage.value = data.error || '查询失败';
+    }
+  } catch (e) {
+    actionError.value = true;
+    actionMessage.value = '网络错误';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function handleEnableUser() {
+  if (!selectedUser.value || !authStore.accessToken) return;
+
+  loading.value = true;
+  actionMessage.value = '';
+  actionError.value = false;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/enable-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.accessToken}`,
+      },
+      body: JSON.stringify({ username: selectedUser.value }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      actionMessage.value = `用户 ${selectedUser.value} 已启用，密码为用户名`;
+    } else {
+      actionError.value = true;
+      actionMessage.value = data.error || '启用失败';
+    }
+  } catch (e) {
+    actionError.value = true;
+    actionMessage.value = '网络错误';
+  } finally {
+    loading.value = false;
+  }
+}
+
 async function handleCreateUser() {
   if (!newUsername.value || !newPassword.value || !authStore.accessToken) return;
 
@@ -262,10 +329,13 @@ button:disabled { opacity: 0.6; }
 .admin-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #333; }
 .admin-section h2 { color: #e94560; margin-bottom: 1rem; font-size: 1.2rem; }
 .admin-section h3 { color: #e0e0e0; margin-bottom: 0.5rem; font-size: 1rem; }
-.button-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.button-group { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
 .button-group button { flex: 1; }
+.btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
 .btn-warning { background: #ff9800; }
 .btn-danger { background: #f44336; }
-.error { color: #e94560; margin-top: 0.5rem; font-size: 0.9rem; }
-.success { color: #4caf50; margin-top: 0.5rem; font-size: 0.9rem; }
+.btn-info { background: #2196f3; }
+.btn-success { background: #4caf50; }
+.error { color: #e94560; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-line; }
+.success { color: #4caf50; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-line; }
 </style>

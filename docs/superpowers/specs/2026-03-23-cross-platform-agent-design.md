@@ -110,6 +110,22 @@ function getAgentName(): string {
 }
 ```
 
+## Existing Cross-Platform Components
+
+### FileManager (`packages/agent/src/file.ts`)
+
+**Already cross-platform compatible.** No changes required.
+
+| Feature | Implementation | Status |
+|---------|---------------|--------|
+| Path handling | `path.join()` | ✅ Node.js handles separators automatically |
+| Home directory | `os.homedir()` | ✅ Returns correct path on all platforms |
+| File operations | `fs/promises` | ✅ Cross-platform API |
+| Permission errors | `EACCES` | ✅ Works on all platforms |
+| Windows drive letters | Regex `^[A-Za-z]:$` | ✅ Only triggers on Windows |
+
+Node.js `fs` and `path` modules automatically handle platform-specific path separators (`/` vs `\`) and other differences.
+
 ## File Changes
 
 ### `packages/agent/src/pty.ts`

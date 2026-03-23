@@ -31,7 +31,7 @@ git init
 
 ```json
 {
-  "name": "ccremote",
+  "name": "remoteCli",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -246,7 +246,7 @@ mkdir -p packages/server/src
 
 ```json
 {
-  "name": "@ccremote/server",
+  "name": "@remotecli/server",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -294,7 +294,7 @@ mkdir -p packages/server/src
 ```env
 PORT=3000
 JWT_SECRET=your-super-secret-key-change-in-production
-DATABASE_PATH=./data/ccremote.db
+DATABASE_PATH=./data/remoteCli.db
 ```
 
 **Step 5: 创建入口文件骨架**
@@ -337,7 +337,7 @@ import 'dotenv/config';
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key',
-  databasePath: process.env.DATABASE_PATH || './data/ccremote.db',
+  databasePath: process.env.DATABASE_PATH || './data/remoteCli.db',
 };
 ```
 
@@ -547,7 +547,7 @@ initDatabase();
 cd packages/server
 pnpm dev
 # 应看到 "Database initialized"
-# 检查 data/ccremote.db 文件是否创建
+# 检查 data/remoteCli.db 文件是否创建
 ```
 
 **Step 6: 提交**
@@ -1062,7 +1062,7 @@ mkdir -p packages/agent/src
 
 ```json
 {
-  "name": "@ccremote/agent",
+  "name": "@remotecli/agent",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -2530,7 +2530,7 @@ git commit -m "docs: add README with quick start guide"
 
 ## 执行选项
 
-**Plan complete and saved to `docs/plans/2026-03-16-ccremote-plan.md`. Two execution options:**
+**Plan complete and saved to `docs/plans/2026-03-16-remoteCli-plan.md`. Two execution options:**
 
 **1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
 

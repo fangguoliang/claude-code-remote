@@ -14,7 +14,7 @@ importers:
 
   packages/agent:
     dependencies:
-      '@ccremote/shared':
+      '@remotecli/shared':
         specifier: workspace:*
         version: link:../shared
       dotenv:
@@ -97,7 +97,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@ccremote/shared':
+      '@remotecli/shared':
         specifier: workspace:*
         version: link:../shared
       '@xterm/addon-fit':

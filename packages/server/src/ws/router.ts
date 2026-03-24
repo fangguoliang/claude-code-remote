@@ -224,12 +224,22 @@ function handleSessionCreate(ws: WebSocket, payload: any) {
   // 通知 Agent 启动会话
   const browser = tunnelManager.getBrowser(ws);
   if (browser?.agentId && success) {
-    tunnelManager.routeToAgent(browser.agentId, {
+    const sent = tunnelManager.routeToAgent(browser.agentId, {
       type: 'session:start',
       sessionId,
       payload: { sessionId, cols, rows },
       timestamp: Date.now(),
     });
+
+    if (!sent) {
+      // Agent 不在线或连接已断开，通知浏览器失败
+      ws.send(JSON.stringify({
+        type: 'session:created',
+        payload: { success: false, error: 'Agent connection lost' },
+        timestamp: Date.now(),
+      }));
+      return;
+    }
   }
 
   ws.send(JSON.stringify({
@@ -265,10 +275,20 @@ function handleSessionResume(ws: WebSocket, sessionId: string | undefined, paylo
   }
 
   // Forward session:resume to Agent
-  tunnelManager.routeToAgent(result.agentId!, {
+  const sent = tunnelManager.routeToAgent(result.agentId!, {
     type: 'session:resume',
     sessionId,
     payload: { cols, rows },
     timestamp: Date.now(),
   });
+
+  if (!sent) {
+    // Agent connection lost after resumeSession succeeded
+    ws.send(JSON.stringify({
+      type: 'session:resumed',
+      sessionId,
+      payload: { success: false, error: 'Agent connection lost' },
+      timestamp: Date.now(),
+    }));
+  }
 }

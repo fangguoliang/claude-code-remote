@@ -176,25 +176,34 @@ function setupVisualViewportHandling(): (() => void) | null {
   if (!('visualViewport' in window) || !terminalPageRef.value) return null;
 
   const terminalPage = terminalPageRef.value;
+  let resizeTimeout: number | null = null;
+
+  const doFitAndScroll = () => {
+    terminalStore.fitActiveTab();
+    terminalStore.scrollActiveTabToBottom();
+  };
 
   const handleViewportChange = () => {
-    // Adjust container height based on visual viewport
-    const viewportHeight = window.visualViewport?.height || window.innerHeight;
-    terminalPage.style.height = `${viewportHeight}px`;
-
-    // When keyboard closes (viewport height approaches innerHeight),
-    // ensure we restore to full height with a delayed check
-    if (window.visualViewport && window.visualViewport.height >= window.innerHeight - 50) {
-      // Keyboard appears to be closed, do a delayed restore check
-      setTimeout(() => {
-        // Use innerHeight as the final height when keyboard is closed
-        // This ensures correct restoration even if visualViewport.height
-        // doesn't properly update
-        if (window.visualViewport && window.visualViewport.height >= window.innerHeight - 50) {
-          terminalPage.style.height = `${window.innerHeight}px`;
-        }
-      }, 100);
+    // Debounce rapid resize events
+    if (resizeTimeout !== null) {
+      clearTimeout(resizeTimeout);
     }
+
+    resizeTimeout = window.setTimeout(() => {
+      resizeTimeout = null;
+
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const keyboardHeight = window.innerHeight - viewportHeight;
+
+      // Adjust bottom position to account for keyboard
+      // This makes the terminal shrink instead of being pushed up
+      terminalPage.style.bottom = `${keyboardHeight}px`;
+
+      // Fit terminal to new size after a brief delay
+      setTimeout(doFitAndScroll, 50);
+      setTimeout(doFitAndScroll, 150);
+      setTimeout(doFitAndScroll, 300);
+    }, 20);
   };
 
   window.visualViewport?.addEventListener('resize', handleViewportChange);
@@ -205,6 +214,9 @@ function setupVisualViewportHandling(): (() => void) | null {
 
   // Return cleanup function
   return () => {
+    if (resizeTimeout !== null) {
+      clearTimeout(resizeTimeout);
+    }
     window.visualViewport?.removeEventListener('resize', handleViewportChange);
     window.visualViewport?.removeEventListener('scroll', handleViewportChange);
   };
@@ -507,9 +519,13 @@ onUnmounted(() => {
 
 <style scoped>
 .terminal-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
   background: #1a1a2e;
 }
 

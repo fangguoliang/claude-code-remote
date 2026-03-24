@@ -329,6 +329,9 @@ export const useTerminalStore = defineStore('terminal', () => {
   // Registry for tab scroll functions
   const tabScrollers = new Map<string, () => void>();
 
+  // Registry for tab fit functions (called on viewport resize)
+  const tabFitters = new Map<string, () => void>();
+
   // Register a focus function for a tab
   function registerTabFocuser(tabId: string, focuser: () => void) {
     tabFocusers.set(tabId, focuser);
@@ -347,6 +350,26 @@ export const useTerminalStore = defineStore('terminal', () => {
   // Unregister a scroll function
   function unregisterTabScroller(tabId: string) {
     tabScrollers.delete(tabId);
+  }
+
+  // Register a fit function for a tab
+  function registerTabFitter(tabId: string, fitter: () => void) {
+    tabFitters.set(tabId, fitter);
+  }
+
+  // Unregister a fit function
+  function unregisterTabFitter(tabId: string) {
+    tabFitters.delete(tabId);
+  }
+
+  // Fit the active tab's terminal
+  function fitActiveTab() {
+    if (activeTabId.value) {
+      const fitter = tabFitters.get(activeTabId.value);
+      if (fitter) {
+        fitter();
+      }
+    }
   }
 
   // Get the last active tab from saved session (for page refresh)
@@ -474,6 +497,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     unregisterTabFocuser,
     registerTabScroller,
     unregisterTabScroller,
+    registerTabFitter,
+    unregisterTabFitter,
+    fitActiveTab,
     getLastActiveTab,
     getLastHistoryTab,
     getAllSessionTabs,

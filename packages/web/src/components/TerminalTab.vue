@@ -59,6 +59,7 @@ onUnmounted(() => {
   terminalStore.unregisterKeySender(props.tab.id);
   terminalStore.unregisterTabFocuser(props.tab.id);
   terminalStore.unregisterTabScroller(props.tab.id);
+  terminalStore.unregisterTabFitter(props.tab.id);
   cleanup();
 });
 
@@ -276,6 +277,26 @@ function initTerminal() {
   // Register scroll to bottom function for this tab
   terminalStore.registerTabScroller(props.tab.id, () => {
     forceScrollToBottom();
+  });
+
+  // Register fit function for this tab (called on viewport resize)
+  terminalStore.registerTabFitter(props.tab.id, () => {
+    if (terminal) {
+      safeFit();
+      // Multiple attempts to scroll to bottom for reliability
+      terminal.scrollToBottom();
+      requestAnimationFrame(() => {
+        terminal?.scrollToBottom();
+        setTimeout(() => {
+          terminal?.scrollToBottom();
+          // Also try direct viewport manipulation
+          const viewport = terminalRef.value?.querySelector('.xterm-viewport') as HTMLElement;
+          if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+          }
+        }, 50);
+      });
+    }
   });
 }
 
@@ -521,6 +542,9 @@ function setupVisualViewportHandling() {
         safeFit();
         // Scroll cursor into view after resize
         forceScrollToBottom();
+
+        // Force xterm to refresh by writing empty string (triggers internal refresh)
+        terminal.refresh(0, terminal.rows - 1);
       }, 100);
     }
   };

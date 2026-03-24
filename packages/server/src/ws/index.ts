@@ -48,8 +48,10 @@ export function setupWebSocket(fastify: FastifyInstance) {
     ws.on('close', () => {
       if (isAgent) {
         // Agent 断开连接 - 需要从 tunnel manager 中移除
-        // 我们需要找到对应的 agentId
-        // 暂时留空，后续可以通过维护 ws -> agentId 的映射来处理
+        const agentId = tunnelManager.getAgentIdByWs(ws);
+        if (agentId) {
+          tunnelManager.unregisterAgent(agentId);
+        }
         console.log('Agent disconnected');
       } else {
         tunnelManager.disconnectBrowser(ws);

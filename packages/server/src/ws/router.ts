@@ -2,7 +2,7 @@
 import WebSocket from 'ws';
 import { webcrypto } from 'crypto';
 import { tunnelManager } from './tunnel.js';
-import { agentModel } from '../db/index.js';
+import { agentModel, userModel, agentPermissionModel } from '../db/index.js';
 
 const crypto = webcrypto;
 
@@ -136,13 +136,24 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
 }
 
 function handleAgentRegister(ws: WebSocket, payload: any) {
-  const { agentId, userId, name } = payload;
+  const { agentId, username, name } = payload;
 
   // 验证必填字段
-  if (!agentId || !userId) {
+  if (!agentId) {
     ws.send(JSON.stringify({
       type: 'register:result',
-      payload: { success: false, error: 'Missing agentId or userId' },
+      payload: { success: false, error: 'Missing agentId' },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
+  // 根据 username 查找用户，默认 admin
+  const user = userModel.findByUsername(username || 'admin');
+  if (!user) {
+    ws.send(JSON.stringify({
+      type: 'register:result',
+      payload: { success: false, error: 'User not found' },
       timestamp: Date.now(),
     }));
     return;
@@ -151,14 +162,14 @@ function handleAgentRegister(ws: WebSocket, payload: any) {
   // 确保 Agent 在数据库中存在
   let agent = agentModel.findByAgentId(agentId);
   if (!agent) {
-    agent = agentModel.create(agentId, name || null, userId);
+    agent = agentModel.create(agentId, name || null, user.id);
   } else {
-    // 更新 name 和 last_seen（每次注册时更新名称）
-    agentModel.updateName(agentId, name || null);
+    // 更新 name、last_seen 和所有者（支持重连时转移归属）
+    agentModel.updateOwner(agentId, name || null, user.id);
   }
 
   // 注册 Agent 到 TunnelManager
-  tunnelManager.registerAgent(ws, agentId, userId);
+  tunnelManager.registerAgent(ws, agentId, user.id);
 
   ws.send(JSON.stringify({
     type: 'register:result',
@@ -210,6 +221,41 @@ function handleSessionCreate(ws: WebSocket, payload: any) {
     tunnelManager.bindBrowserToAgent(ws, agentId);
   }
 
+  // 获取浏览器信息用于权限验证
+  const browser = tunnelManager.getBrowser(ws);
+  if (!browser?.agentId) {
+    ws.send(JSON.stringify({
+      type: 'session:created',
+      payload: { success: false, error: 'No agent selected' },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
+  // 验证用户是否有权限访问该 Agent
+  const agent = agentModel.findByAgentId(browser.agentId);
+  if (!agent) {
+    ws.send(JSON.stringify({
+      type: 'session:created',
+      payload: { success: false, error: 'Agent not found' },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
+  // 检查权限：所有者或被授权用户
+  const isOwner = agent.user_id === browser.userId;
+  const hasSharedAccess = agentPermissionModel.hasPermission(browser.agentId, browser.userId);
+
+  if (!isOwner && !hasSharedAccess) {
+    ws.send(JSON.stringify({
+      type: 'session:created',
+      payload: { success: false, error: 'Permission denied' },
+      timestamp: Date.now(),
+    }));
+    return;
+  }
+
   const success = tunnelManager.createSession(ws, sessionId);
 
   if (!success) {
@@ -222,7 +268,6 @@ function handleSessionCreate(ws: WebSocket, payload: any) {
   }
 
   // 通知 Agent 启动会话
-  const browser = tunnelManager.getBrowser(ws);
   if (browser?.agentId && success) {
     const sent = tunnelManager.routeToAgent(browser.agentId, {
       type: 'session:start',

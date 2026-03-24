@@ -33,3 +33,17 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+-- Agent 权限表（共享权限）
+CREATE TABLE IF NOT EXISTS agent_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(agent_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_permissions_agent_id ON agent_permissions(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_permissions_user_id ON agent_permissions(user_id);

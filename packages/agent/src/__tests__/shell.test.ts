@@ -69,7 +69,7 @@ describe('getShell', () => {
     const result = getShell();
 
     expect(result.shell).toBe('/bin/zsh');
-    expect(result.args).toEqual(['-l']);
+    expect(result.args).toEqual([]);  // No -l flag on macOS due to posix_spawnp issue
   });
 
   it('should fallback to bash on macOS when zsh not found', () => {
@@ -81,7 +81,7 @@ describe('getShell', () => {
     const result = getShell();
 
     expect(result.shell).toBe('/bin/bash');
-    expect(result.args).toEqual(['-l']);
+    expect(result.args).toEqual([]);  // No -l flag on macOS
   });
 
   it('should fallback to sh on macOS when zsh and bash not found', () => {
@@ -91,7 +91,7 @@ describe('getShell', () => {
     const result = getShell();
 
     expect(result.shell).toBe('/bin/sh');
-    expect(result.args).toEqual(['-l']);
+    expect(result.args).toEqual([]);  // No -l flag on macOS
   });
 
   it('should return bash on Linux when available', () => {

@@ -38,13 +38,14 @@ export function getShell(): ShellConfig {
 
   if (platform === 'darwin') {
     // macOS: zsh -> bash -> sh
+    // Note: -l flag causes posix_spawnp error on some macOS versions
     if (shellExists('/bin/zsh')) {
-      return { shell: '/bin/zsh', args: ['-l'] };
+      return { shell: '/bin/zsh', args: [] };
     }
     if (shellExists('/bin/bash')) {
-      return { shell: '/bin/bash', args: ['-l'] };
+      return { shell: '/bin/bash', args: [] };
     }
-    return { shell: '/bin/sh', args: ['-l'] };
+    return { shell: '/bin/sh', args: [] };
   }
 
   // Linux and other Unix: bash -> sh

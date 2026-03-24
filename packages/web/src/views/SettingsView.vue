@@ -74,6 +74,86 @@
           {{ loading ? '处理中...' : '创建用户' }}
         </button>
         <p v-if="createMessage" :class="createError ? 'error' : 'success'">{{ createMessage }}</p>
+
+        <!-- Agent Authorization Section -->
+        <h2 style="margin-top: 2rem;">Agent 授权管理</h2>
+
+        <!-- View Permissions -->
+        <div class="form-group">
+          <label>选择 Agent</label>
+          <select v-model="selectedAgent">
+            <option value="">选择 Agent</option>
+            <option v-for="agent in agents" :key="agent.agentId" :value="agent.agentId">
+              {{ agent.name || agent.agentId }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>选择用户</label>
+          <select v-model="selectedUserForView">
+            <option value="">选择用户</option>
+            <option v-for="user in users" :key="user.id" :value="user.username">
+              {{ user.username }}
+            </option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button @click="handleViewAgentPermissions" :disabled="!selectedAgent" class="btn-sm btn-info">查看 Agent 权限</button>
+          <button @click="handleViewUserPermissions" :disabled="!selectedUserForView" class="btn-sm btn-info">查看用户权限</button>
+        </div>
+
+        <!-- Permission Detail -->
+        <div class="form-group" v-if="permissionDetail">
+          <label>权限详情</label>
+          <textarea :value="permissionDetail" readonly rows="4" class="permission-detail"></textarea>
+        </div>
+
+        <!-- Batch Operations -->
+        <h3 style="margin-top: 1.5rem;">批量操作</h3>
+        <div class="form-group">
+          <label>用户多选</label>
+          <div class="checkbox-group">
+            <label v-for="user in users" :key="user.id" class="checkbox-label">
+              <input type="checkbox" :value="user.id" v-model="multiSelectUsers" />
+              {{ user.username }}
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Agent 多选</label>
+          <div class="checkbox-group">
+            <label v-for="agent in agents" :key="agent.agentId" class="checkbox-label">
+              <input type="checkbox" :value="agent.agentId" v-model="multiSelectAgents" />
+              {{ agent.name || agent.agentId }}
+            </label>
+          </div>
+        </div>
+        <div class="button-group">
+          <button @click="handleGrantPermissions" :disabled="!multiSelectUsers.length || !multiSelectAgents.length" class="btn-sm btn-success">授权选中</button>
+          <button @click="handleRevokePermissions" :disabled="!multiSelectUsers.length || !multiSelectAgents.length" class="btn-sm btn-danger">移除选中</button>
+        </div>
+
+        <!-- Transfer Owner -->
+        <h3 style="margin-top: 1.5rem;">转移所有者</h3>
+        <div class="form-group">
+          <label>选择 Agent</label>
+          <select v-model="transferAgentId">
+            <option value="">选择 Agent</option>
+            <option v-for="agent in agents" :key="agent.agentId" :value="agent.agentId">
+              {{ agent.name || agent.agentId }} ({{ agent.ownerName }})
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>新所有者</label>
+          <select v-model="transferUserId">
+            <option :value="null">选择用户</option>
+            <option v-for="user in users" :key="user.id" :value="user.id">
+              {{ user.username }}
+            </option>
+          </select>
+        </div>
+        <button @click="handleTransferOwner" :disabled="!transferAgentId || !transferUserId" class="btn-sm btn-warning">转移所有者</button>
       </div>
 
       <router-link v-if="isAuthenticated" to="/terminal" class="back-link">返回终端</router-link>
@@ -103,6 +183,16 @@ const newPassword = ref('');
 const createMessage = ref('');
 const createError = ref(false);
 
+// Agent authorization state
+const agents = ref<{ agentId: string; name: string | null; ownerId: number; ownerName: string; sharedUsers: { id: number; username: string }[] }[]>([]);
+const selectedAgent = ref('');
+const selectedUserForView = ref('');
+const permissionDetail = ref('');
+const multiSelectAgents = ref<string[]>([]);
+const multiSelectUsers = ref<number[]>([]);
+const transferAgentId = ref('');
+const transferUserId = ref<number | null>(null);
+
 async function fetchUsers() {
   if (!isAdmin.value || !authStore.accessToken) return;
 
@@ -116,6 +206,135 @@ async function fetchUsers() {
     }
   } catch (e) {
     console.error('Failed to fetch users:', e);
+  }
+}
+
+async function fetchAgents() {
+  if (!isAdmin.value || !authStore.accessToken) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/agents`, {
+      headers: { Authorization: `Bearer ${authStore.accessToken}` },
+    });
+    const data = await response.json();
+    if (data.agents) {
+      agents.value = data.agents;
+    }
+  } catch (e) {
+    console.error('Failed to fetch agents:', e);
+  }
+}
+
+async function handleViewAgentPermissions() {
+  if (!selectedAgent.value || !authStore.accessToken) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/agents/${selectedAgent.value}/permissions`, {
+      headers: { Authorization: `Bearer ${authStore.accessToken}` },
+    });
+    const data = await response.json();
+    if (data.agentId) {
+      const sharedNames = data.sharedUsers.map((u: { username: string }) => u.username).join(', ') || '无';
+      permissionDetail.value = `Agent: ${data.name || data.agentId}\n所有者: ${data.owner?.username || '未知'}\n可使用用户: ${sharedNames}`;
+    }
+  } catch (e) {
+    permissionDetail.value = '查询失败';
+  }
+}
+
+async function handleViewUserPermissions() {
+  if (!selectedUserForView.value || !authStore.accessToken) return;
+
+  const user = users.value.find(u => u.username === selectedUserForView.value);
+  if (!user) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/users/${user.id}/permissions`, {
+      headers: { Authorization: `Bearer ${authStore.accessToken}` },
+    });
+    const data = await response.json();
+    if (data.user) {
+      const ownedNames = data.ownedAgents.map((a: { name: string | null; agentId: string }) => a.name || a.agentId).join(', ') || '无';
+      const sharedNames = data.sharedAgents.map((a: { name: string | null; agentId: string }) => a.name || a.agentId).join(', ') || '无';
+      permissionDetail.value = `用户: ${data.user.username}\n拥有的 Agent: ${ownedNames}\n可使用的 Agent: ${sharedNames}`;
+    }
+  } catch (e) {
+    permissionDetail.value = '查询失败';
+  }
+}
+
+async function handleGrantPermissions() {
+  if (!multiSelectAgents.value.length || !multiSelectUsers.value.length || !authStore.accessToken) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/agent-permissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.accessToken}`,
+      },
+      body: JSON.stringify({
+        agentIds: multiSelectAgents.value,
+        userIds: multiSelectUsers.value,
+      }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      permissionDetail.value = '授权成功';
+      await fetchAgents();
+    }
+  } catch (e) {
+    permissionDetail.value = '授权失败';
+  }
+}
+
+async function handleRevokePermissions() {
+  if (!multiSelectAgents.value.length || !multiSelectUsers.value.length || !authStore.accessToken) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/agent-permissions`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.accessToken}`,
+      },
+      body: JSON.stringify({
+        agentIds: multiSelectAgents.value,
+        userIds: multiSelectUsers.value,
+      }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      permissionDetail.value = '移除成功';
+      await fetchAgents();
+    }
+  } catch (e) {
+    permissionDetail.value = '移除失败';
+  }
+}
+
+async function handleTransferOwner() {
+  if (!transferAgentId.value || !transferUserId.value || !authStore.accessToken) return;
+
+  try {
+    const response = await fetch(`${settings.apiUrl}/api/admin/agent-permissions/transfer-owner`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.accessToken}`,
+      },
+      body: JSON.stringify({
+        agentId: transferAgentId.value,
+        newOwnerId: transferUserId.value,
+      }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      permissionDetail.value = '转移成功';
+      await fetchAgents();
+    }
+  } catch (e) {
+    permissionDetail.value = '转移失败';
   }
 }
 
@@ -313,6 +532,7 @@ async function handleCreateUser() {
 
 onMounted(() => {
   fetchUsers();
+  fetchAgents();
 });
 </script>
 
@@ -338,4 +558,8 @@ button:disabled { opacity: 0.6; }
 .btn-success { background: #4caf50; }
 .error { color: #e94560; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-line; }
 .success { color: #4caf50; margin-top: 0.5rem; font-size: 0.9rem; white-space: pre-line; }
+.permission-detail { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 4px; background: #1a1a2e; color: #fff; font-family: monospace; resize: vertical; }
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.checkbox-label { display: flex; align-items: center; gap: 0.25rem; color: #e0e0e0; font-size: 0.9rem; cursor: pointer; }
+.checkbox-label input { width: auto; }
 </style>

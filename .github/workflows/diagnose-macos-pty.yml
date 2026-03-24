@@ -26,10 +26,23 @@ jobs:
       - name: Install dependencies
         run: |
           pnpm install
+
+          echo ""
+          echo "=== Check if node-pty was built ==="
+          ls -la node_modules/node-pty/build/Release/ 2>/dev/null || echo "No build directory"
+
+          echo ""
+          echo "=== Force rebuild node-pty ==="
+          cd packages/agent && pnpm rebuild node-pty 2>&1 || npm rebuild node-pty 2>&1 || echo "Rebuild attempted"
+
+          echo ""
+          echo "=== Check again ==="
+          ls -la ../../node_modules/node-pty/build/Release/ 2>/dev/null || echo "Still no build directory"
+
           echo ""
           echo "=== Check node-pty native module ==="
-          file node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "Native module not found"
-          otool -L node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "otool failed"
+          file ../../node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "Native module not found"
+          otool -L ../../node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "otool failed"
 
       - name: Diagnose shell environment
         run: |

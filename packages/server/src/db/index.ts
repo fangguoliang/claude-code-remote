@@ -170,6 +170,11 @@ export const agentModel = {
     runStatement('UPDATE agents SET last_seen = ? WHERE agent_id = ?', [Date.now(), agentId]);
     saveDatabase();
   },
+
+  updateName: (agentId: string, name: string | null) => {
+    runStatement('UPDATE agents SET name = ?, last_seen = ? WHERE agent_id = ?', [name, Date.now(), agentId]);
+    saveDatabase();
+  },
 };
 
 // 刷新令牌相关操作

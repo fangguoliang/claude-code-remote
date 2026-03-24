@@ -90,6 +90,8 @@
     <div class="bottom-bar" v-if="tabs.length > 0">
       <button class="key-btn tab-btn" @click="sendKey('Tab')">Tab</button>
       <button class="key-btn capture-btn" @click="openSaveModal" :disabled="capturedCommands.length === 0" title="保存为快捷方式">📝</button>
+      <button class="key-btn ctrl-c-btn" @click="sendKey('CtrlC')" title="Ctrl+C 中断">C</button>
+      <button class="key-btn ctrl-d-btn" @click="sendKey('CtrlD')" title="Ctrl+D 退出/EOF">D</button>
       <div class="spacer"></div>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowLeft')">←</button>
       <button class="key-btn arrow-btn" @click="sendKey('ArrowUp')">↑</button>
@@ -835,19 +837,21 @@ onUnmounted(() => {
   align-items: center;
   padding: 0.4rem 0.5rem;
   background: #16213e;
-  gap: 0.3rem;
+  gap: 0.2rem;
 }
 
 .spacer {
   flex: 1;
+  min-width: 0.3rem;
 }
 
 .key-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.5rem;
   background: #252547;
   border: 1px solid #333;
   border-radius: 6px;
@@ -866,9 +870,37 @@ onUnmounted(() => {
 }
 
 .tab-btn {
-  width: 60px;
+  min-width: 40px;
   font-weight: bold;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+  background: #7b1fa2;
+}
+
+.tab-btn:active {
+  background: #6a1b9a;
+  transform: scale(0.95);
+}
+
+.ctrl-c-btn {
+  background: #c62828;
+  min-width: 40px;
+  font-weight: bold;
+}
+
+.ctrl-c-btn:active {
+  background: #b71c1c;
+  transform: scale(0.95);
+}
+
+.ctrl-d-btn {
+  background: #1565c0;
+  min-width: 40px;
+  font-weight: bold;
+}
+
+.ctrl-d-btn:active {
+  background: #0d47a1;
+  transform: scale(0.95);
 }
 
 .arrow-btn {

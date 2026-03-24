@@ -153,8 +153,8 @@ function handleAgentRegister(ws: WebSocket, payload: any) {
   if (!agent) {
     agent = agentModel.create(agentId, name || null, userId);
   } else {
-    // 更新 last_seen
-    agentModel.updateLastSeen(agentId);
+    // 更新 name 和 last_seen（每次注册时更新名称）
+    agentModel.updateName(agentId, name || null);
   }
 
   // 注册 Agent 到 TunnelManager

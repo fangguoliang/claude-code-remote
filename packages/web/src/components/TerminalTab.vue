@@ -318,6 +318,8 @@ function sendKey(key: string) {
     'Enter': '\r',
     'Escape': '\x1b',
     'Backspace': '\x7f',
+    'CtrlC': '\x03',
+    'CtrlD': '\x04',
   };
   const data = keyMap[key] || key;
   sendInput(data);

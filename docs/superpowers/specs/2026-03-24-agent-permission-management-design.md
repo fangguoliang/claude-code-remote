@@ -49,6 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_agent_permissions_agent_id ON agent_permissions(a
 CREATE INDEX IF NOT EXISTS idx_agent_permissions_user_id ON agent_permissions(user_id);
 ```
 
+**说明**：
+- 只存储"共享权限"，所有者仍由 `agents.user_id` 表示
+- 所有者**不**在此表中，避免数据冗余，查询时需合并所有者和共享用户
+- 同一 (agent_id, user_id) 组合唯一，避免重复授权
+- 级联删除：Agent 或用户删除时自动清理权限记录
+
 **数据模型** (`packages/server/src/db/index.ts`)：
 
 ```typescript
@@ -77,12 +83,19 @@ export const agentPermissionModel = {
 | `/api/admin/agent-permissions` | DELETE | 批量移除权限 |
 | `/api/admin/agent-permissions/transfer-owner` | POST | 转移所有者 |
 
-**批量授权请求体**：
+**批量授权请求体（POST）**：
 ```json
 {
   "userIds": [1, 2, 3],
-  "agentIds": ["agent-a", "agent-b"],
-  "action": "grant"
+  "agentIds": ["agent-a", "agent-b"]
+}
+```
+
+**批量移除权限请求体（DELETE）**：
+```json
+{
+  "userIds": [1, 2],
+  "agentIds": ["agent-a"]
 }
 ```
 

@@ -1,0 +1,139 @@
+name: Diagnose macOS PTY
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: macos-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Diagnose shell environment
+        run: |
+          echo "=== Shell paths ==="
+          ls -la /bin/zsh /bin/bash /bin/sh 2>&1
+
+          echo ""
+          echo "=== Shell versions ==="
+          /bin/zsh --version 2>&1 || echo "zsh failed"
+          /bin/bash --version 2>&1 || echo "bash failed"
+
+          echo ""
+          echo "=== Current user ==="
+          whoami
+          id
+
+          echo ""
+          echo "=== Environment ==="
+          echo "HOME: $HOME"
+          echo "SHELL: $SHELL"
+
+          echo ""
+          echo "=== Test spawn via child_process ==="
+          node -e "
+            const { spawn } = require('child_process');
+            const shells = ['/bin/zsh', '/bin/bash', '/bin/sh'];
+            for (const shell of shells) {
+              const p = spawn(shell, ['-c', 'echo SUCCESS with ' + shell]);
+              let output = '';
+              p.stdout.on('data', d => output += d);
+              p.stderr.on('data', d => output += d);
+              p.on('close', (code) => {
+                console.log(shell + ' exit code:', code, 'output:', output.trim());
+              });
+            }
+          "
+          sleep 2
+
+      - name: Test node-pty spawn
+        run: |
+          echo "=== Test node-pty with different shells ==="
+
+          node -e "
+            const pty = require('node-pty');
+
+            const tests = [
+              { shell: '/bin/zsh', args: [] },
+              { shell: '/bin/zsh', args: ['-l'] },
+              { shell: '/bin/bash', args: [] },
+              { shell: '/bin/bash', args: ['-l'] },
+              { shell: '/bin/sh', args: [] },
+            ];
+
+            let current = 0;
+
+            function runTest() {
+              if (current >= tests.length) {
+                console.log('\\n=== All tests completed ===');
+                process.exit(0);
+              }
+
+              const test = tests[current];
+              console.log('\\n--- Test ' + (current + 1) + ': ' + test.shell + ' ' + JSON.stringify(test.args) + ' ---');
+
+              try {
+                const p = pty.spawn(test.shell, test.args, {
+                  name: 'xterm-256color',
+                  cols: 80,
+                  rows: 24,
+                  cwd: process.env.HOME,
+                  env: process.env
+                });
+
+                let output = '';
+                p.onData((data) => {
+                  output += data;
+                });
+
+                p.write('echo PTY_SUCCESS\\n');
+
+                setTimeout(() => {
+                  if (output.includes('PTY_SUCCESS')) {
+                    console.log('SUCCESS: PTY spawned and responded');
+                  } else {
+                    console.log('PARTIAL: PTY created but no response');
+                    console.log('Output:', output.substring(0, 200));
+                  }
+                  p.kill();
+                  current++;
+                  setTimeout(runTest, 500);
+                }, 2000);
+
+                p.onExit(({ exitCode }) => {
+                  console.log('Exit code:', exitCode);
+                });
+
+              } catch (e) {
+                console.log('FAILED:', e.message);
+                current++;
+                setTimeout(runTest, 500);
+              }
+            }
+
+            runTest();
+          "
+
+      - name: Build and test
+        run: |
+          cd packages/shared && pnpm build
+          cd ../agent
+          pnpm build
+          pnpm test

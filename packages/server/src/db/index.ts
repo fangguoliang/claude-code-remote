@@ -175,6 +175,14 @@ export const agentModel = {
     runStatement('UPDATE agents SET name = ?, last_seen = ? WHERE agent_id = ?', [name, Date.now(), agentId]);
     saveDatabase();
   },
+
+  updateOwner: (agentId: string, name: string | null, userId: number) => {
+    runStatement(
+      'UPDATE agents SET name = ?, user_id = ?, last_seen = ? WHERE agent_id = ?',
+      [name, userId, Date.now(), agentId]
+    );
+    saveDatabase();
+  },
 };
 
 // 刷新令牌相关操作
@@ -207,8 +215,72 @@ export const refreshTokenModel = {
   },
 };
 
+// Agent 权限相关操作
+export const agentPermissionModel = {
+  // 批量授权（笛卡尔积）
+  grant: (agentIds: string[], userIds: number[]) => {
+    const now = Date.now();
+    for (const agentId of agentIds) {
+      for (const userId of userIds) {
+        try {
+          runStatement(
+            'INSERT OR IGNORE INTO agent_permissions (agent_id, user_id, created_at) VALUES (?, ?, ?)',
+            [agentId, userId, now]
+          );
+        } catch (e) {
+          // 忽略重复插入错误
+        }
+      }
+    }
+    saveDatabase();
+  },
+
+  // 批量移除权限
+  revoke: (agentIds: string[], userIds: number[]) => {
+    for (const agentId of agentIds) {
+      for (const userId of userIds) {
+        runStatement(
+          'DELETE FROM agent_permissions WHERE agent_id = ? AND user_id = ?',
+          [agentId, userId]
+        );
+      }
+    }
+    saveDatabase();
+  },
+
+  // 查询 Agent 的共享用户列表
+  findByAgentId: (agentId: string) => {
+    return queryAll<{ user_id: number; username: string }>(
+      `SELECT ap.user_id, u.username FROM agent_permissions ap
+       JOIN users u ON ap.user_id = u.id
+       WHERE ap.agent_id = ?`,
+      [agentId]
+    );
+  },
+
+  // 查询用户被授权的 Agent 列表
+  findByUserId: (userId: number) => {
+    return queryAll<{ agent_id: string; name: string | null }>(
+      `SELECT a.agent_id, a.name FROM agent_permissions ap
+       JOIN agents a ON ap.agent_id = a.agent_id
+       WHERE ap.user_id = ?`,
+      [userId]
+    );
+  },
+
+  // 检查用户是否有权限访问 Agent
+  hasPermission: (agentId: string, userId: number) => {
+    const result = queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM agent_permissions WHERE agent_id = ? AND user_id = ?',
+      [agentId, userId]
+    );
+    return (result?.count ?? 0) > 0;
+  },
+};
+
 // 清空所有表 (用于测试)
 export const clearDatabase = () => {
+  db.run('DELETE FROM agent_permissions');
   db.run('DELETE FROM refresh_tokens');
   db.run('DELETE FROM agents');
   db.run('DELETE FROM users');

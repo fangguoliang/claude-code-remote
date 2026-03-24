@@ -63,8 +63,33 @@ jobs:
           "
           sleep 2
 
+      - name: Check PTY devices
+        run: |
+          echo "=== Check /dev/pt* ==="
+          ls -la /dev/pt* 2>&1 || echo "No /dev/pt* found"
+
+          echo ""
+          echo "=== Check /dev/tty* ==="
+          ls -la /dev/tty* 2>&1 | head -10 || echo "No /dev/tty* found"
+
+          echo ""
+          echo "=== Check for pty devices ==="
+          ls -la /dev/pty* 2>&1 || echo "No /dev/pty* found"
+
+          echo ""
+          echo "=== Try opening a pty via script command ==="
+          script -q /dev/null echo "Script test works" 2>&1 || echo "Script command failed"
+
       - name: Test node-pty spawn
         run: |
+          echo "=== Check node-pty module ==="
+          ls -la node_modules/node-pty/build/Release/
+
+          echo ""
+          echo "=== Try rebuilding node-pty ==="
+          npm rebuild node-pty 2>&1 || echo "Rebuild completed with warnings"
+
+          echo ""
           echo "=== Test node-pty with different shells ==="
 
           node -e "

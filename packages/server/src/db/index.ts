@@ -166,6 +166,17 @@ export const agentModel = {
     }>('SELECT * FROM agents WHERE user_id = ?', [userId]);
   },
 
+  findAll: () => {
+    return queryAll<{
+      id: number;
+      agent_id: string;
+      name: string | null;
+      user_id: number;
+      last_seen: number | null;
+      created_at: number;
+    }>('SELECT * FROM agents ORDER BY created_at DESC');
+  },
+
   updateLastSeen: (agentId: string) => {
     runStatement('UPDATE agents SET last_seen = ? WHERE agent_id = ?', [Date.now(), agentId]);
     saveDatabase();

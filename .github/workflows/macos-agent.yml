@@ -53,9 +53,22 @@ jobs:
           echo "AGENT_ID=$AGENT_ID" >> packages/agent/.env
           echo "USER_ID=$USER_ID" >> packages/agent/.env
 
-          # Run agent for specified duration
+          # Run agent for specified duration (macOS doesn't have timeout command)
           cd packages/agent
-          timeout ${{ inputs.duration }}m node dist/index.js || true
+          node -e "
+            const { spawn } = require('child_process');
+            const proc = spawn('node', ['dist/index.js'], {
+              stdio: 'inherit',
+              env: { ...process.env, SERVER_URL: '$SERVER_URL', AGENT_ID: '$AGENT_ID', USER_ID: '1' }
+            });
+            proc.on('error', (e) => { console.error('Failed to start:', e); process.exit(1); });
+            proc.on('exit', (code) => process.exit(code || 0));
+            setTimeout(() => {
+              console.log('\\nDuration elapsed, stopping agent...');
+              proc.kill('SIGTERM');
+              setTimeout(() => process.exit(0), 1000);
+            }, ${{ inputs.duration }} * 60 * 1000);
+          "
 
       - name: Cleanup
         if: always()

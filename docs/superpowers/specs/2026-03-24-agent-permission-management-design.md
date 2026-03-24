@@ -58,6 +58,20 @@ CREATE INDEX IF NOT EXISTS idx_agent_permissions_user_id ON agent_permissions(us
 **数据模型** (`packages/server/src/db/index.ts`)：
 
 ```typescript
+// agentModel 新增方法
+export const agentModel = {
+  // ... 现有方法 ...
+
+  // 更新所有者（Agent 重连时调用）
+  updateOwner: (agentId: string, name: string | null, userId: number) => {
+    runStatement(
+      'UPDATE agents SET name = ?, user_id = ?, last_seen = ? WHERE agent_id = ?',
+      [name, userId, Date.now(), agentId]
+    );
+    saveDatabase();
+  },
+};
+
 export const agentPermissionModel = {
   // 批量授权
   grant: (agentIds: string[], userIds: number[]) => void,
@@ -152,14 +166,21 @@ if (!user) {
   // 用户不存在，拒绝注册
   return { success: false, error: 'User not found' };
 }
-// 绑定到用户
-agentModel.create(agentId, name, user.id);
+// 创建或更新 Agent（包括所有者）
+let agent = agentModel.findByAgentId(agentId);
+if (!agent) {
+  agent = agentModel.create(agentId, name, user.id);
+} else {
+  // 更新 name、last_seen 和所有者（支持重连时转移归属）
+  agentModel.updateOwner(agentId, name, user.id);
+}
 ```
 
 **行为**：
 - 如果 `.env` 中配置了 `USERNAME=zhangsan`，Agent 归属该用户
 - 如果没有配置或为空，Agent 自动归属 admin
 - 普通用户只需知道自己的用户名，无需查询用户ID
+- **重连更新**：Agent 每次重连时都会根据当前 USERNAME 更新所有者（支持转移设备归属）
 
 ### 管理界面交互设计
 
@@ -223,6 +244,8 @@ agentModel.create(agentId, name, user.id);
    - 选择单个 Agent + 单个用户
    - 点击"转移所有者"，更改 Agent 所有者
 
+### 用户 Agent 查询逻辑
+
 修改 `/api/agents` 接口，返回用户有权限访问的所有 Agent：
 
 ```typescript
@@ -265,9 +288,10 @@ const allAgents = mergeAndDedupe(ownedAgents, sharedAgents);
 
 1. Agent 安装时使用 USERNAME 绑定用户，默认 admin
 2. 用户名不存在时 Agent 注册失败
-3. 查看 Agent 权限：显示所有者和共享用户列表
-4. 查看用户权限：显示拥有的 Agent 和可使用的 Agent
-5. 批量授权/移除权限的笛卡尔积正确性
-6. 所有者转移后权限变化正确性
-7. 用户只能看到有权限的 Agent
-8. 无权限用户无法创建会话
+3. Agent 重连时更新所有者（修改 USERNAME 后重连生效）
+4. 查看 Agent 权限：显示所有者和共享用户列表
+5. 查看用户权限：显示拥有的 Agent 和可使用的 Agent
+6. 批量授权/移除权限的笛卡尔积正确性
+7. 所有者转移后权限变化正确性
+8. 用户只能看到有权限的 Agent
+9. 无权限用户无法创建会话

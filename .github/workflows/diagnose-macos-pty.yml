@@ -5,7 +5,7 @@ on:
 
 jobs:
   diagnose:
-    runs-on: macos-13  # Try older macOS version
+    runs-on: macos-latest
     timeout-minutes: 10
 
     steps:
@@ -24,7 +24,12 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          pnpm install
+          echo ""
+          echo "=== Check node-pty native module ==="
+          file node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "Native module not found"
+          otool -L node_modules/node-pty/build/Release/pty.node 2>/dev/null || echo "otool failed"
 
       - name: Diagnose shell environment
         run: |
@@ -101,11 +106,10 @@ jobs:
             const pty = require('node-pty');
 
             const tests = [
-              { shell: '/bin/zsh', args: [] },
-              { shell: '/bin/zsh', args: ['-l'] },
-              { shell: '/bin/bash', args: [] },
-              { shell: '/bin/bash', args: ['-l'] },
-              { shell: '/bin/sh', args: [] },
+              { shell: '/bin/zsh', args: [], method: 'spawn' },
+              { shell: '/bin/bash', args: [], method: 'spawn' },
+              { shell: '/bin/bash', args: [], method: 'fork' },
+              { shell: '/bin/sh', args: [], method: 'spawn' },
             ];
 
             let current = 0;
@@ -117,16 +121,28 @@ jobs:
               }
 
               const test = tests[current];
-              console.log('\\n--- Test ' + (current + 1) + ': ' + test.shell + ' ' + JSON.stringify(test.args) + ' ---');
+              console.log('\\n--- Test ' + (current + 1) + ': ' + test.method + ' ' + test.shell + ' ' + JSON.stringify(test.args) + ' ---');
 
               try {
-                const p = pty.spawn(test.shell, test.args, {
-                  name: 'xterm-256color',
-                  cols: 80,
-                  rows: 24,
-                  cwd: process.env.HOME,
-                  env: process.env
-                });
+                let p;
+                if (test.method === 'fork') {
+                  // Try fork method
+                  p = pty.fork(test.shell, test.args, {
+                    name: 'xterm-256color',
+                    cols: 80,
+                    rows: 24,
+                    cwd: process.env.HOME,
+                    env: process.env
+                  });
+                } else {
+                  p = pty.spawn(test.shell, test.args, {
+                    name: 'xterm-256color',
+                    cols: 80,
+                    rows: 24,
+                    cwd: process.env.HOME,
+                    env: process.env
+                  });
+                }
 
                 let output = '';
                 p.onData((data) => {

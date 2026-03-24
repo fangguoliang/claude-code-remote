@@ -67,16 +67,53 @@ pnpm dev
 
 ### 3. 启动 Agent (Windows)
 
+> **重要**: Agent 安装前必须先配置绑定的用户名！详见下方 [Agent 用户绑定](#agent-用户绑定)。
+
 ```bash
 cd packages/agent
 cp .env.example .env
 # 编辑 .env 配置:
 # SERVER_URL=ws://your-server:3000/ws/agent
-# USER_ID=1
+# USERNAME=your-username  # 绑定到此用户，默认为 admin
+# AGENT_ID=unique-agent-id  # 可选，不填则自动生成
 pnpm dev
 ```
 
 Agent 将自动连接服务器并等待终端会话请求。
+
+#### Agent 环境变量说明
+
+| 变量 | 描述 | 默认值 |
+|------|------|--------|
+| SERVER_URL | 服务器 WebSocket 地址 | 必填 |
+| USERNAME | 绑定的用户名 | admin |
+| AGENT_ID | Agent 唯一标识 | 自动生成 |
+| SECRET | 注册密钥（需与服务器配置一致） | dev-secret |
+
+#### Agent 用户绑定
+
+**每个 Agent 必须绑定到一个用户**，只有该用户及其被授权的用户才能访问此 Agent。
+
+**配置方法：**
+
+1. 在服务器上先创建用户（通过 admin 账户或注册）
+2. 编辑 Agent 的 `.env` 文件，设置 `USERNAME` 为目标用户名
+3. 启动 Agent，它会自动绑定到该用户
+
+**示例：**
+```env
+# .env
+SERVER_URL=wss://your-server.com/ws/agent
+USERNAME=test01
+SECRET=your-secret
+```
+
+**权限说明：**
+- Agent 所有者：完全控制 Agent
+- 被授权用户：可通过 Admin 授权访问该 Agent
+- Admin 用户：可管理所有 Agent 的权限
+
+> **注意**：如果 Agent 已注册后修改 `USERNAME`，重启 Agent 会将所有权转移到新用户。
 
 ### 4. 启动前端
 
@@ -118,6 +155,12 @@ pnpm dev
 | POST | /api/admin/enable-user | 启用用户 |
 | GET | /api/admin/user-status/:username | 查看用户状态 |
 | POST | /api/admin/delete-user | 删除用户 |
+| GET | /api/admin/agents | 获取所有 Agent 及所有者 |
+| GET | /api/admin/agents/:agentId/permissions | 获取 Agent 授权用户 |
+| GET | /api/admin/users/:userId/permissions | 获取用户可访问的 Agent |
+| POST | /api/admin/agent-permissions | 批量授权用户访问 Agent |
+| DELETE | /api/admin/agent-permissions | 批量撤销权限 |
+| POST | /api/admin/agent-permissions/transfer-owner | 转移 Agent 所有权 |
 
 ### 健康检查
 
@@ -231,6 +274,7 @@ nssm start RemoteCliAgent
 - 自动重连
 - 用户管理 (admin 可创建/禁用/删除用户)
 - 修改密码功能
+- **Agent 权限管理** (admin 可授权用户访问指定 Agent)
 
 ## 技术栈
 

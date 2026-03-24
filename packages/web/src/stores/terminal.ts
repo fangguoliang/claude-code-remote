@@ -31,12 +31,19 @@ interface StoredSession {
 }
 
 const SESSION_KEY = 'remotecli-terminal-session';
-const HISTORY_KEY = 'remotecli-terminal-history';
 const CAPTURED_KEY = 'remotecli-captured-commands';
-const SHORTCUTS_KEY = 'remotecli-shortcuts';
 const MAX_HISTORY = 10;
 const MAX_SHORTCUTS = 10;
 const MAX_CAPTURED_COMMANDS = 100;
+
+// User-specific storage keys
+function getHistoryKey(username: string): string {
+  return `remotecli-terminal-history-${username}`;
+}
+
+function getShortcutsKey(username: string): string {
+  return `remotecli-shortcuts-${username}`;
+}
 
 // Key sender function type
 type KeySender = (key: string) => void;
@@ -70,10 +77,11 @@ function clearSessionData(): void {
   }
 }
 
-// History storage (persistent, survives browser close)
-function loadHistoryData(): Tab[] {
+// History storage (persistent, survives browser close, user-specific)
+function loadHistoryData(username: string): Tab[] {
+  if (!username) return [];
   try {
-    const data = localStorage.getItem(HISTORY_KEY);
+    const data = localStorage.getItem(getHistoryKey(username));
     if (data) {
       return JSON.parse(data);
     }
@@ -83,11 +91,21 @@ function loadHistoryData(): Tab[] {
   return [];
 }
 
-function saveHistoryData(tabs: Tab[]): void {
+function saveHistoryData(tabs: Tab[], username: string): void {
+  if (!username) return;
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(tabs));
+    localStorage.setItem(getHistoryKey(username), JSON.stringify(tabs));
   } catch (e) {
     console.error('Failed to save history:', e);
+  }
+}
+
+function clearHistoryData(username: string): void {
+  if (!username) return;
+  try {
+    localStorage.removeItem(getHistoryKey(username));
+  } catch (e) {
+    console.error('Failed to clear history:', e);
   }
 }
 
@@ -120,10 +138,11 @@ function clearCapturedCommandsStorage(): void {
   }
 }
 
-// Shortcuts storage (persistent)
-function loadShortcuts(): Shortcut[] {
+// Shortcuts storage (persistent, user-specific)
+function loadShortcuts(username: string): Shortcut[] {
+  if (!username) return [];
   try {
-    const data = localStorage.getItem(SHORTCUTS_KEY);
+    const data = localStorage.getItem(getShortcutsKey(username));
     if (data) {
       return JSON.parse(data);
     }
@@ -133,11 +152,21 @@ function loadShortcuts(): Shortcut[] {
   return [];
 }
 
-function saveShortcuts(shortcuts: Shortcut[]): void {
+function saveShortcuts(shortcuts: Shortcut[], username: string): void {
+  if (!username) return;
   try {
-    localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(shortcuts));
+    localStorage.setItem(getShortcutsKey(username), JSON.stringify(shortcuts));
   } catch (e) {
     console.error('Failed to save shortcuts:', e);
+  }
+}
+
+function clearShortcutsData(username: string): void {
+  if (!username) return;
+  try {
+    localStorage.removeItem(getShortcutsKey(username));
+  } catch (e) {
+    console.error('Failed to clear shortcuts:', e);
   }
 }
 
@@ -145,12 +174,29 @@ export const useTerminalStore = defineStore('terminal', () => {
   const tabs = ref<Tab[]>([]);
   const activeTabId = ref<string | null>(null);
   const agents = ref<{ agentId: string; name: string; online: boolean }[]>([]);
-  const historyTabs = ref<Tab[]>(loadHistoryData());
   const capturedCommands = ref<CapturedCommand[]>(loadCapturedCommands());
-  const shortcuts = ref<Shortcut[]>(loadShortcuts());
+  const shortcuts = ref<Shortcut[]>([]);
+
+  // Current username for user-specific storage
+  let currentUsername = '';
 
   // Registry for key senders (tabId -> sendKey function)
   const keySenders = new Map<string, KeySender>();
+
+  // Initialize user-specific data (call on login)
+  function initUserData(username: string) {
+    currentUsername = username;
+    historyTabs.value = loadHistoryData(username);
+    shortcuts.value = loadShortcuts(username);
+  }
+
+  // Get current username
+  function getUsername(): string {
+    return currentUsername;
+  }
+
+  // History tabs (lazy loaded on initUserData)
+  const historyTabs = ref<Tab[]>([]);
 
   // Watch for changes and auto-save session
   watch(
@@ -166,11 +212,13 @@ export const useTerminalStore = defineStore('terminal', () => {
     { deep: true }
   );
 
-  // Watch history and auto-save to localStorage
+  // Watch history and auto-save to localStorage (user-specific)
   watch(
     historyTabs,
     () => {
-      saveHistoryData(historyTabs.value);
+      if (currentUsername) {
+        saveHistoryData(historyTabs.value, currentUsername);
+      }
     },
     { deep: true }
   );
@@ -184,11 +232,13 @@ export const useTerminalStore = defineStore('terminal', () => {
     { deep: true }
   );
 
-  // Watch shortcuts and auto-save to localStorage
+  // Watch shortcuts and auto-save to localStorage (user-specific)
   watch(
     shortcuts,
     () => {
-      saveShortcuts(shortcuts.value);
+      if (currentUsername) {
+        saveShortcuts(shortcuts.value, currentUsername);
+      }
     },
     { deep: true }
   );
@@ -421,8 +471,10 @@ export const useTerminalStore = defineStore('terminal', () => {
     keySenders.clear();
     clearSessionData();
     clearCapturedCommandsStorage();
-    localStorage.removeItem(HISTORY_KEY);
-    localStorage.removeItem(SHORTCUTS_KEY);
+    if (currentUsername) {
+      clearHistoryData(currentUsername);
+      clearShortcutsData(currentUsername);
+    }
   }
 
   // Capture a command from terminal
@@ -481,6 +533,8 @@ export const useTerminalStore = defineStore('terminal', () => {
     historyTabs,
     capturedCommands,
     shortcuts,
+    initUserData,
+    getUsername,
     addTab,
     restoreTab,
     removeTab,

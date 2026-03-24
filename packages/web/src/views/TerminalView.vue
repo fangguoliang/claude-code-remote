@@ -273,6 +273,11 @@ let sessionRestored = false;
 let cleanupViewportHandling: (() => void) | null = null;
 
 onMounted(() => {
+  // Initialize user-specific data (history, shortcuts)
+  if (authStore.username) {
+    terminalStore.initUserData(authStore.username);
+  }
+
   loadAgents().then(() => {
     // Auto-restore last active terminal after agents are loaded
     if (!sessionRestored) {

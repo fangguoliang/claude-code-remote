@@ -283,19 +283,8 @@ function initTerminal() {
   terminalStore.registerTabFitter(props.tab.id, () => {
     if (terminal) {
       safeFit();
-      // Multiple attempts to scroll to bottom for reliability
-      terminal.scrollToBottom();
-      requestAnimationFrame(() => {
-        terminal?.scrollToBottom();
-        setTimeout(() => {
-          terminal?.scrollToBottom();
-          // Also try direct viewport manipulation
-          const viewport = terminalRef.value?.querySelector('.xterm-viewport') as HTMLElement;
-          if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-          }
-        }, 50);
-      });
+      // Call forceScrollToBottom to reset userScrolledUp flag and scroll to bottom
+      forceScrollToBottom();
     }
   });
 }

@@ -55,6 +55,14 @@ class FileWebSocketService {
 
       this.ws.onclose = () => {
         console.log('[fileWebSocket] WebSocket closed');
+        // Clean up viewing state
+        this.viewingPath = null;
+        // Clean up viewer-specific chunks
+        for (const key of this.transferChunks.keys()) {
+          if (key.startsWith('viewer-')) {
+            this.transferChunks.delete(key);
+          }
+        }
       };
     });
   }
@@ -315,6 +323,16 @@ class FileWebSocketService {
     const store = useFileStore();
     store.setError(payload.message);
     store.setLoading(false);
+
+    // Handle viewing download error
+    if (payload.path && this.viewingPath === payload.path) {
+      store.setViewerLoading(false);
+      store.setValidatingPath(null);
+      this.viewingPath = null;
+      // Clean up viewer chunks
+      const viewId = 'viewer-' + payload.path;
+      this.transferChunks.delete(viewId);
+    }
 
     // 更新相关传输状态
     if (payload.path) {

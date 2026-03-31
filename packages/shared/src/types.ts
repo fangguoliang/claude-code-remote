@@ -21,7 +21,9 @@ export type MessageType =
   | 'file:uploaded'
   | 'file:download'
   | 'file:data'
-  | 'file:error';
+  | 'file:error'
+  | 'file:validate'
+  | 'file:validated';
 
 export interface Message {
   type: MessageType;
@@ -134,4 +136,17 @@ export interface FileErrorPayload {
   code: string;
   message: string;
   path?: string;
+}
+
+// 文件路径验证 (用于终端 Markdown 查看器)
+export interface FileValidatePayload {
+  path: string;        // 检测到的路径 (可能是相对路径)
+  sessionId: string;   // 用于获取工作目录的会话ID
+}
+
+export interface FileValidatedPayload {
+  originalPath: string;    // 原始检测到的路径
+  resolvedPath: string;    // 解析后的完整路径
+  exists: boolean;         // 文件是否存在
+  error?: string;          // 验证失败时的错误信息
 }

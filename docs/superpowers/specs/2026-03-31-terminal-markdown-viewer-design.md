@@ -276,9 +276,45 @@ const handleTouchEnd = (e: TouchEvent) => {
 
 ### Mode Transition
 
-- **Preview Mode**: md-editor-v3 with `previewOnly="true"` prop
-- **Edit Mode**: md-editor-v3 with full editor toolbar
-- Transition animation: slide effect between modes
+**Implementation**: Use `md-editor-v3` with `previewOnly` prop toggle.
+
+```vue
+<template>
+  <div class="markdown-viewer">
+    <MdEditor
+      v-model="content"
+      theme="dark"
+      :previewOnly="!isEditMode"
+      style="height: 100%"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { MdEditor } from 'md-editor-v3';
+import 'md-editor-v3/lib/style.css';
+
+const isEditMode = ref(false);  // Default: preview only
+
+// Swipe gesture handler
+const handleSwipe = (direction: 'left' | 'right') => {
+  if (direction === 'left') {
+    isEditMode.value = true;   // Swipe left → edit mode
+  } else {
+    isEditMode.value = false;  // Swipe right → preview mode
+  }
+};
+</script>
+```
+
+**Styles**: Reuse NSDScripter's dark theme overrides from `MarkdownReviewPanel.vue`:
+- Background: `#1E1E1E`
+- Header/toolbar: `#252526`
+- Border: `#3C3C3C`
+- Text: `#D4D4D4`
+- Accent (headers): `#FF8E53`
+- Code background: `#2D2D2D`
 
 ### File Sync Flow
 
@@ -566,8 +602,8 @@ function clearViewer() {
 ### Visual States
 
 1. **Loading**: Spinner while fetching file content
-2. **Preview**: Rendered markdown with styled dark theme
-3. **Edit**: Editor with toolbar, syntax highlighting
+2. **Preview (default)**: Rendered markdown with dark theme (previewOnly=true)
+3. **Edit (swipe left)**: Full editor with toolbar (previewOnly=false)
 4. **Saving**: "Syncing..." overlay
 5. **Saved**: Green toast notification "已同步到 Agent"
 

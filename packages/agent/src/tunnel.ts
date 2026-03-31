@@ -3,6 +3,8 @@ import { config } from './config.js';
 import { PtyManager } from './pty.js';
 import { FileManager } from './file.js';
 import { getAgentName } from './shell.js';
+import { validateFilePath } from './validation.js';
+import type { FileValidatePayload } from '@remotecli/shared';
 
 export class Tunnel {
   private ws: WebSocket | null = null;
@@ -128,6 +130,10 @@ export class Tunnel {
 
         case 'file:upload':
           this.handleFileUpload(payload);
+          break;
+
+        case 'file:validate':
+          this.handleFileValidate(payload, sessionId);
           break;
       }
     } catch (err) {
@@ -331,6 +337,34 @@ export class Tunnel {
       });
       this.uploadSessions.delete(filePath);
     }
+  }
+
+  private handleFileValidate(payload: FileValidatePayload, sessionId?: string) {
+    if (!sessionId) {
+      this.send({
+        type: 'file:validated',
+        payload: {
+          originalPath: payload.path,
+          resolvedPath: payload.path,
+          exists: false,
+          error: 'No session ID provided',
+        },
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const result = validateFilePath(
+      { path: payload.path, sessionId },
+      this.ptyManager
+    );
+
+    this.send({
+      type: 'file:validated',
+      sessionId,
+      payload: result,
+      timestamp: Date.now(),
+    });
   }
 
   private send(message: unknown) {

@@ -109,6 +109,28 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
       }
       break;
 
+    case 'file:validate':
+      // Browser requests path validation
+      // Note: Requires sessionId for working directory resolution
+      if (sessionId) {
+        const browser = tunnelManager.getBrowser(ws);
+        if (browser?.agentId) {
+          tunnelManager.routeToAgent(browser.agentId, message);
+        } else {
+          ws.send(JSON.stringify({
+            type: 'file:validated',
+            payload: {
+              originalPath: payload?.path,
+              resolvedPath: '',
+              exists: false,
+              error: 'No agent session',
+            },
+            timestamp: Date.now(),
+          }));
+        }
+      }
+      break;
+
     case 'file:list':
     case 'file:data':
     case 'file:progress':
@@ -122,6 +144,13 @@ export function handleMessage(ws: WebSocket, message: any, isAgent: boolean) {
         }
       } else if (sessionId) {
         // 兼容旧的 sessionId 方式
+        tunnelManager.routeToBrowser(sessionId, message);
+      }
+      break;
+
+    case 'file:validated':
+      // Agent returns validation result to specific browser session
+      if (isAgent && sessionId) {
         tunnelManager.routeToBrowser(sessionId, message);
       }
       break;

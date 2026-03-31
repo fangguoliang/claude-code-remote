@@ -6,9 +6,10 @@ import type { FileValidatePayload, FileValidatedPayload } from '@remotecli/share
 
 export function validateFilePath(
   payload: FileValidatePayload,
+  sessionId: string,
   ptyManager: PtyManager
 ): FileValidatedPayload {
-  const { path: inputPath, sessionId } = payload;
+  const { path: inputPath } = payload;
 
   // Get working directory from PtyManager
   const cwd = ptyManager.getWorkingDirectory(sessionId);

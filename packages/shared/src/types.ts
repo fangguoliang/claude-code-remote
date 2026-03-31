@@ -141,7 +141,6 @@ export interface FileErrorPayload {
 // 文件路径验证 (用于终端 Markdown 查看器)
 export interface FileValidatePayload {
   path: string;        // 检测到的路径 (可能是相对路径)
-  sessionId: string;   // 用于获取工作目录的会话ID
 }
 
 export interface FileValidatedPayload {

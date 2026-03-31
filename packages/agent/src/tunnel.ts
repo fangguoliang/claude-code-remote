@@ -355,7 +355,8 @@ export class Tunnel {
     }
 
     const result = validateFilePath(
-      { path: payload.path, sessionId },
+      payload,
+      sessionId,
       this.ptyManager
     );
 

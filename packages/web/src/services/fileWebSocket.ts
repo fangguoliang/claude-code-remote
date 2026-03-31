@@ -1,4 +1,4 @@
-import type { FileListPayload, FileProgressPayload, FileDataPayload, FileUploadedPayload, FileErrorPayload } from '@remotecli/shared';
+import type { FileListPayload, FileProgressPayload, FileDataPayload, FileUploadedPayload, FileErrorPayload, FileValidatedPayload } from '@remotecli/shared';
 import { useFileStore } from '@/stores/file';
 import { useAuthStore } from '@/stores/auth';
 
@@ -8,6 +8,7 @@ class FileWebSocketService {
   private ws: WebSocket | null = null;
   private messageHandlers = new Map<string, MessageHandler[]>();
   private transferChunks = new Map<string, { chunks: Map<number, string>; totalChunks: number; totalSize: number }>();
+  private viewingPath: string | null = null;
 
   connect(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -100,6 +101,9 @@ class FileWebSocketService {
       case 'file:error':
         this.handleFileError(payload as FileErrorPayload);
         break;
+      case 'file:validated':
+        this.handleFileValidated(payload as FileValidatedPayload);
+        break;
     }
   }
 
@@ -121,6 +125,14 @@ class FileWebSocketService {
 
   private handleFileData(payload: FileDataPayload) {
     const store = useFileStore();
+
+    // Check if this is a "for viewing" download
+    if (this.viewingPath === payload.path) {
+      this.assembleViewContent(payload);
+      return;
+    }
+
+    // Regular download
     const transferId = payload.path;
 
     // 初始化分块缓冲
@@ -228,6 +240,63 @@ class FileWebSocketService {
     return bytes;
   }
 
+  private assembleViewContent(payload: FileDataPayload) {
+    const store = useFileStore();
+    const viewId = 'viewer-' + payload.path;
+
+    // Initialize chunks on first chunk
+    if (payload.chunkIndex === 0) {
+      this.transferChunks.set(viewId, {
+        chunks: new Map(),
+        totalChunks: payload.totalChunks,
+        totalSize: payload.totalSize,
+      });
+    }
+
+    // Store chunk
+    const transfer = this.transferChunks.get(viewId);
+    if (transfer) {
+      transfer.chunks.set(payload.chunkIndex, payload.content);
+
+      // All chunks received
+      if (transfer.chunks.size === transfer.totalChunks) {
+        // Assemble content
+        let content = '';
+        for (let i = 0; i < transfer.totalChunks; i++) {
+          const chunk = transfer.chunks.get(i);
+          if (chunk) {
+            // Decode base64 to text
+            content += this.base64ToText(chunk);
+          }
+        }
+
+        // Store content and show viewer
+        store.setViewerContent(content);
+        store.setViewerLoading(false);
+        store.setViewerVisible(true);
+        store.setValidatingPath(null);
+
+        // Cleanup
+        this.transferChunks.delete(viewId);
+        this.viewingPath = null;
+      }
+    }
+  }
+
+  // Helper: base64 to text
+  private base64ToText(base64: string): string {
+    try {
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch {
+      return '';
+    }
+  }
+
   private handleFileUploaded(payload: FileUploadedPayload) {
     const store = useFileStore();
     const transferId = payload.path;
@@ -250,6 +319,27 @@ class FileWebSocketService {
     // 更新相关传输状态
     if (payload.path) {
       store.updateTransfer(payload.path, { status: 'error', error: payload.message });
+    }
+  }
+
+  private handleFileValidated(payload: FileValidatedPayload) {
+    console.log('[fileWebSocket] handleFileValidated:', payload);
+    const store = useFileStore();
+
+    store.setValidatedPath({
+      originalPath: payload.originalPath,
+      resolvedPath: payload.resolvedPath,
+      exists: payload.exists,
+    });
+
+    if (payload.exists) {
+      // File exists - trigger download for viewing
+      this.downloadForView(payload.resolvedPath);
+    } else {
+      // File not found - show error
+      store.setValidatingPath(null);
+      store.setViewerLoading(false);
+      // Error will be shown by component
     }
   }
 
@@ -336,6 +426,38 @@ class FileWebSocketService {
     };
 
     reader.readAsArrayBuffer(file);
+  }
+
+  validatePath(path: string, sessionId: string) {
+    console.log('[fileWebSocket] validatePath:', path, 'sessionId:', sessionId);
+    this.send({
+      type: 'file:validate',
+      payload: { path },
+      sessionId,
+      timestamp: Date.now(),
+    });
+  }
+
+  downloadForView(path: string) {
+    console.log('[fileWebSocket] downloadForView:', path);
+    const store = useFileStore();
+
+    // Set loading state
+    store.setViewerLoading(true);
+    store.setViewerPath(path);
+
+    // Mark this as a "for viewing" download
+    this.viewingPath = path;
+
+    this.send({
+      type: 'file:download',
+      payload: { path },
+      timestamp: Date.now(),
+    });
+  }
+
+  public sendMessage(message: unknown) {
+    this.send(message);
   }
 
   on(type: string, handler: MessageHandler) {

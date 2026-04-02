@@ -344,16 +344,20 @@ import Fastify from 'fastify';
 import { tunnelManager } from '../ws/tunnel';
 
 const proxyApp = Fastify();
+
+// Configure raw body parser for binary data support (file uploads, POST with binary)
+proxyApp.addContentTypeParser('*', { parseAs: 'buffer' }, (req, body) => body);
+
 const pendingRequests = new Map<string, {
   resolve: (response: HttpResponsePayload) => void;
   reject: (error: Error) => void;
   timeout: NodeJS.Timeout;
 }>();
 
-// Handle all proxy requests - URL is encoded in path
-proxyApp.all('/proxy/:sessionId/:encodedUrl', async (request, reply) => {
+// Handle all proxy requests - use wildcard to capture encoded URL
+proxyApp.all('/proxy/:sessionId/*', async (request, reply) => {
   const sessionId = request.params.sessionId;
-  const encodedUrl = request.params.encodedUrl;
+  const encodedUrl = request.params['*'];  // Wildcard captures the rest of the path
 
   // Decode the target URL
   const targetUrl = decodeURIComponent(encodedUrl);
@@ -385,7 +389,7 @@ proxyApp.all('/proxy/:sessionId/:encodedUrl', async (request, reply) => {
       url: targetUrl,
       method: request.method,
       headers,
-      body: request.body ? Buffer.from(request.body as string).toString('base64') : undefined,
+      body: request.body ? (request.body as Buffer).toString('base64') : undefined,
     },
     timestamp: Date.now(),
   };
@@ -443,8 +447,9 @@ export function handleHttpResponse(message: Message) {
   }
 }
 
-// TunnelManager needs new method - add to packages/server/src/ws/tunnel.ts
-export function getAgentWebSocketForSession(sessionId: string): WebSocket | null {
+// TunnelManager class method - add to packages/server/src/ws/tunnel.ts
+// Inside TunnelManager class definition:
+getAgentWebSocketForSession(sessionId: string): WebSocket | null {
   // Find agentId for this session
   const agentId = this.sessionAgents.get(sessionId);
   if (!agentId) return null;

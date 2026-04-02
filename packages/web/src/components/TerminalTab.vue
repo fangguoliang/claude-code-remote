@@ -261,8 +261,10 @@ function initTerminal() {
           return;
         }
 
-        // Match .md file paths (including Windows drive letters)
-        const mdRegex = /[a-zA-Z0-9_:\\\-./]+\.md/g;
+        // Match .md file paths (Windows absolute, relative, Unix-style)
+        // Note: '-' must be at start of character class to avoid range interpretation
+        // Matches: docs/path/file.md, ./file.md, D:\path\file.md
+        const mdRegex = /[-a-zA-Z0-9_:.\\\/]+\.md/g;
         const foundLinks: any[] = [];
         let matchResult;
 
@@ -321,8 +323,8 @@ function initTerminal() {
 
     const lineText = line.translateToString(true);
 
-    // Check if click is on a .md file (including Windows drive letters)
-    const mdRegex = /[a-zA-Z0-9_:\\\-./]+\.md/g;
+    // Check if click is on a .md file (Windows absolute, relative, Unix-style)
+    const mdRegex = /[-a-zA-Z0-9_:.\\\/]+\.md/g;
     let match;
     while ((match = mdRegex.exec(lineText)) !== null) {
       const matchedPath = match[0];

@@ -4,6 +4,7 @@ import { PtyManager } from './pty.js';
 import { FileManager } from './file.js';
 import { getAgentName } from './shell.js';
 import { validateFilePath } from './validation.js';
+import { handleHttpRequest } from './httpHandler.js';
 import type { FileValidatePayload } from '@remotecli/shared';
 
 export class Tunnel {
@@ -134,6 +135,10 @@ export class Tunnel {
 
         case 'file:validate':
           this.handleFileValidate(payload, sessionId);
+          break;
+
+        case 'http:request':
+          handleHttpRequest(this.ws!, message);
           break;
       }
     } catch (err) {

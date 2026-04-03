@@ -245,6 +245,16 @@ class TunnelManager {
   getAgentCount(): number {
     return this.agents.size;
   }
+
+  // Get Agent WebSocket for a specific session (used by HTTP proxy)
+  getAgentWebSocketForSession(sessionId: string): WebSocket | null {
+    // Find agentId for this session
+    const agentId = this.sessionAgents.get(sessionId);
+    if (!agentId) return null;
+
+    // Find agent WebSocket
+    return this.agents.get(agentId)?.ws || null;
+  }
 }
 
 export const tunnelManager = new TunnelManager();

@@ -4,6 +4,7 @@
     <div v-if="status === 'connecting'" class="status-overlay">连接中...</div>
     <div v-if="status === 'disconnected'" class="status-overlay error">已断开</div>
     <MarkdownViewer />
+    <WebViewer />
   </div>
 </template>
 
@@ -16,9 +17,11 @@ import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
 import { useTerminalStore } from '../stores/terminal';
 import { useFileStore } from '../stores/file';
+import { useWebViewerStore } from '../stores/webViewer';
 import { fileWebSocket } from '../services/fileWebSocket';
 import type { Tab } from '../stores/terminal';
 import MarkdownViewer from './MarkdownViewer.vue';
+import WebViewer from './WebViewer.vue';
 import 'xterm/css/xterm.css';
 
 const props = defineProps<{ tab: Tab; visible: boolean; autoExecuteCommands?: string[] }>();
@@ -40,6 +43,7 @@ const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const terminalStore = useTerminalStore();
 const fileStore = useFileStore();
+const webViewerStore = useWebViewerStore();
 
 // Constants for command execution timing
 const PROMPT_WAIT_INTERVAL = 100; // ms
@@ -154,6 +158,22 @@ function handleMdPathClick(matchedPath: string) {
   } else {
     fileWebSocket.validatePath(pathToSend, sessionId);
   }
+}
+
+// Handle localhost URL click
+function handleLocalhostUrlClick(url: string) {
+  console.log('[TerminalTab] handleLocalhostUrlClick:', url, 'sessionId:', sessionId);
+
+  if (!sessionId) {
+    console.log('[TerminalTab] no sessionId, cannot open WebViewer');
+    // Could show toast here if needed
+    return;
+  }
+
+  // Set WebViewer state
+  webViewerStore.setUrl(url);
+  webViewerStore.setSessionId(sessionId);
+  webViewerStore.setVisible(true);
 }
 
 onMounted(() => {
@@ -526,6 +546,31 @@ function initTerminal() {
               break;
             }
           }
+        }
+
+        // Localhost URL detection
+        const urlRegex = /https?:\/\/(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:[\/\?#][^\s]*)?/g;
+        let urlMatch;
+
+        while ((urlMatch = urlRegex.exec(lineText)) !== null) {
+          const matchedUrl = urlMatch[0];
+          const matchStart = urlMatch.index;
+          const matchEnd = matchStart + matchedUrl.length;
+
+          foundLinks.push({
+            range: {
+              start: { x: matchStart + 1, y: bufferLineNumber },
+              end: { x: matchEnd, y: bufferLineNumber },
+            },
+            text: matchedUrl,
+            decorations: {
+              underline: true,
+              pointerCursor: true,
+            },
+            activate(_event: MouseEvent, _text: string) {
+              handleLocalhostUrlClick(matchedUrl);
+            },
+          });
         }
 
         if (foundLinks.length > 0) {

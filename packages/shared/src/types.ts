@@ -23,7 +23,9 @@ export type MessageType =
   | 'file:data'
   | 'file:error'
   | 'file:validate'
-  | 'file:validated';
+  | 'file:validated'
+  | 'http:request'      // HTTP proxy request
+  | 'http:response';    // HTTP proxy response
 
 export interface Message {
   type: MessageType;
@@ -148,4 +150,21 @@ export interface FileValidatedPayload {
   resolvedPath: string;    // 解析后的完整路径
   exists: boolean;         // 文件是否存在
   error?: string;          // 验证失败时的错误信息
+}
+
+// HTTP Proxy 相关类型
+export interface HttpRequestPayload {
+  requestId: string;      // Unique request ID for response matching
+  url: string;            // Target URL (e.g., http://localhost:3000/api/data)
+  method: string;         // HTTP method (GET, POST, PUT, DELETE)
+  headers?: Record<string, string | string[]>;  // Request headers (supports multi-value)
+  body?: string;          // Request body (base64 encoded, for POST/PUT)
+}
+
+export interface HttpResponsePayload {
+  requestId: string;      // Request ID for matching
+  status: number;         // HTTP status code (200, 404, 500, etc.)
+  headers: Record<string, string | string[]>;  // Response headers (supports multi-value like Set-Cookie)
+  body: string;           // Response body (base64 encoded)
+  error?: string;         // Error message if request failed
 }

@@ -51,6 +51,9 @@ importers:
       '@fastify/jwt':
         specifier: ^8.0.0
         version: 8.0.1
+      '@remotecli/shared':
+        specifier: workspace:*
+        version: link:../shared
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3

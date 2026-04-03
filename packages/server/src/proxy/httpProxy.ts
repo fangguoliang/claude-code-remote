@@ -1,13 +1,10 @@
 // packages/server/src/proxy/httpProxy.ts
 
-import Fastify, { type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { tunnelManager } from '../ws/tunnel.js';
 import type { Message, HttpResponsePayload } from '@remotecli/shared';
 
-const proxyApp = Fastify({ logger: true });
-
-// Configure raw body parser for binary data support (file uploads, POST with binary)
-proxyApp.addContentTypeParser('*', { parseAs: 'buffer' }, (_req: FastifyRequest, body: Buffer) => body);
+let proxyApp: FastifyInstance | null = null;
 
 // Store pending requests waiting for Agent response
 const pendingRequests = new Map<string, {
@@ -17,7 +14,7 @@ const pendingRequests = new Map<string, {
 }>();
 
 // Handle all proxy requests - use wildcard to capture encoded URL
-proxyApp.all('/proxy/:sessionId/*', async (request, reply) => {
+async function handleProxyRequest(request: FastifyRequest, reply: any) {
   const params = request.params as { sessionId: string; '*': string };
   const sessionId = params.sessionId;
   const encodedUrl = params['*'];  // Wildcard captures the rest of the path
@@ -92,7 +89,7 @@ proxyApp.all('/proxy/:sessionId/*', async (request, reply) => {
     const error = err as Error;
     reply.code(502).send({ error: error.message });
   }
-});
+}
 
 // Handle Agent response
 export function handleHttpResponse(message: Message) {
@@ -113,12 +110,27 @@ export function handleHttpResponse(message: Message) {
 
 // Start the proxy server
 export async function startProxyServer(port: number = 8080) {
+  if (proxyApp) {
+    console.log('HTTP Proxy already running');
+    return proxyApp;
+  }
+
   try {
+    proxyApp = Fastify({ logger: true });
+
+    // Configure raw body parser for binary data support
+    proxyApp.addContentTypeParser('*', { parseAs: 'buffer' }, (_req: FastifyRequest, body: Buffer) => body);
+
+    // Register proxy route
+    proxyApp.all('/proxy/:sessionId/*', handleProxyRequest);
+
     await proxyApp.listen({ port, host: '0.0.0.0' });
     console.log(`HTTP Proxy server running on port ${port}`);
     return proxyApp;
   } catch (err) {
-    proxyApp.log.error(err);
+    if (proxyApp) {
+      proxyApp.log.error(err);
+    }
     throw err;
   }
 }

@@ -169,6 +169,8 @@ class TunnelManager {
 
     browser.sessionId = sessionId;
     agent.sessions.set(sessionId, browserWs);
+    // Also set session -> agentId mapping for HTTP proxy (active session)
+    this.sessionAgents.set(sessionId, browser.agentId);
     return true;
   }
 

@@ -1,5 +1,6 @@
 // packages/server/src/proxy/httpProxy.ts
 
+import crypto from 'crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { tunnelManager } from '../ws/tunnel.js';
 import type { Message, HttpResponsePayload } from '@remotecli/shared';

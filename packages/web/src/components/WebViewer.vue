@@ -18,6 +18,7 @@
           :src="webViewerStore.proxyUrl ?? undefined"
           :style="iframeStyle"
           frameborder="0"
+          scrolling="yes"
           allowfullscreen
         ></iframe>
       </div>
@@ -45,6 +46,7 @@
           :src="webViewerStore.proxyUrl ?? undefined"
           :style="iframeStyle"
           frameborder="0"
+          scrolling="yes"
           allowfullscreen
         ></iframe>
       </div>
@@ -93,15 +95,23 @@ const displayUrl = computed(() => {
 
 // iframe style for scaling in landscape mode
 const iframeStyle = computed(() => {
-  if (!webViewerStore.isLandscape) {
-    // Portrait: actual size display (fit to container)
+  // Desktop viewport: always fill the entire screen (100% width/height)
+  if (webViewerStore.viewport === 'desktop') {
     return {
       width: '100%',
       height: '100%',
     };
   }
 
-  // Landscape: scaled to fit screen
+  if (!webViewerStore.isLandscape) {
+    // Portrait (mobile): actual size display (fit to container)
+    return {
+      width: '100%',
+      height: '100%',
+    };
+  }
+
+  // Tablet landscape: scaled to fit screen
   const viewport = webViewerStore.currentViewportSize;
   const controlBarWidth = 48;
   const screenWidth = window.innerWidth - controlBarWidth;
@@ -191,7 +201,7 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 <style scoped>
 .web-viewer {
   position: fixed;
-  background: #1a1a2e;
+  background: transparent;
   z-index: 1000;
 }
 
@@ -199,6 +209,7 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 .web-viewer.fullscreen {
   inset: 0;
   display: flex;
+  background: #1a1a2e;
 }
 
 .web-viewer.fullscreen:not(.landscape) {
@@ -230,17 +241,30 @@ watch(() => webViewerStore.state, (newState, oldState) => {
   flex: 1;
   overflow: hidden;
   display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  /* White background as default - iframe pages will overlay their own styles */
+  background: #fff;
 }
 
 .landscape-content {
   flex: 1;
   overflow: auto;
-  background: #0f0f23;
+  /* White background as default */
+  background: #fff;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .viewer-content iframe {
   border: none;
-  background: white;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Reset color-scheme to default (both light and dark supported)
+     This prevents inheriting parent's dark-only scheme,
+     allowing iframe document to control its own styling */
+  color-scheme: light dark;
 }
 
 .viewer-controls {

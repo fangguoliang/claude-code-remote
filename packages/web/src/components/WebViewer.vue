@@ -95,11 +95,14 @@ const displayUrl = computed(() => {
 
 // iframe style for scaling in landscape mode
 const iframeStyle = computed(() => {
-  // Desktop viewport: always fill the entire screen (100% width/height)
+  // Desktop viewport: show actual size with scrollbars
   if (webViewerStore.viewport === 'desktop') {
+    const viewport = webViewerStore.currentViewportSize;
     return {
-      width: '100%',
-      height: '100%',
+      width: `${viewport.width}px`,
+      height: `${viewport.height}px`,
+      minWidth: '100%',
+      minHeight: '100%',
     };
   }
 
@@ -239,7 +242,7 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 
 .viewer-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;

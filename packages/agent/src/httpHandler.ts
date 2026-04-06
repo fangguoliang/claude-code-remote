@@ -1,13 +1,39 @@
 // packages/agent/src/httpHandler.ts
 
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
 import { WebSocket } from 'ws';
 import type { Message, HttpRequestPayload } from '@remotecli/shared';
+
+// MIME types for common file extensions
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+};
 
 export async function handleHttpRequest(ws: WebSocket, message: Message) {
   const payload = message.payload as HttpRequestPayload;
   const sessionId = message.sessionId;
   const { requestId, url, method, headers, body } = payload;
+
+  // Check if this is a file:// URL (local HTML file)
+  if (url.startsWith('file://')) {
+    await handleFileRequest(ws, sessionId, requestId, url);
+    return;
+  }
 
   // Parse target URL (usually localhost)
   let targetUrl: URL;
@@ -74,6 +100,77 @@ export async function handleHttpRequest(ws: WebSocket, message: Message) {
       payload: {
         requestId,
         status: 502,
+        headers: {},
+        body: '',
+        error: error.message,
+      },
+      timestamp: Date.now(),
+    }));
+  }
+}
+
+// Handle file:// URL requests (local HTML files)
+async function handleFileRequest(ws: WebSocket, sessionId: string | undefined, requestId: string, fileUrl: string) {
+  try {
+    // Convert file:// URL to local path
+    // file:///C:/path/to/file.html -> C:\path\to\file.html
+    let localPath = fileUrl.replace('file:///', '');
+
+    // Handle URL encoding (e.g., %20 for spaces)
+    localPath = decodeURIComponent(localPath);
+
+    // On Windows, convert forward slashes to backslashes
+    if (process.platform === 'win32') {
+      localPath = localPath.replace(/\//g, '\\');
+    }
+
+    console.log('[Agent] handleFileRequest:', fileUrl, '->', localPath);
+
+    // Check if file exists
+    if (!fs.existsSync(localPath)) {
+      ws.send(JSON.stringify({
+        type: 'http:response',
+        sessionId,
+        payload: {
+          requestId,
+          status: 404,
+          headers: { 'Content-Type': 'text/plain' },
+          body: Buffer.from('File not found: ' + localPath).toString('base64'),
+          error: 'File not found',
+        },
+        timestamp: Date.now(),
+      }));
+      return;
+    }
+
+    // Read file content
+    const fileContent = fs.readFileSync(localPath);
+
+    // Determine content type based on file extension
+    const ext = path.extname(localPath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+    // Send response
+    ws.send(JSON.stringify({
+      type: 'http:response',
+      sessionId,
+      payload: {
+        requestId,
+        status: 200,
+        headers: { 'Content-Type': contentType },
+        body: fileContent.toString('base64'),
+      },
+      timestamp: Date.now(),
+    }));
+  } catch (err) {
+    const error = err as Error;
+    console.error('[Agent] handleFileRequest error:', error);
+    ws.send(JSON.stringify({
+      type: 'http:response',
+      sessionId,
+      payload: {
+        requestId,
+        status: 500,
         headers: {},
         body: '',
         error: error.message,

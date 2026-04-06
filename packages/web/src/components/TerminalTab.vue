@@ -166,12 +166,53 @@ function handleLocalhostUrlClick(url: string) {
 
   if (!sessionId) {
     console.log('[TerminalTab] no sessionId, cannot open WebViewer');
-    // Could show toast here if needed
     return;
   }
 
   // Set WebViewer state
   webViewerStore.setUrl(url);
+  webViewerStore.setSessionId(sessionId);
+  webViewerStore.setVisible(true);
+}
+
+// Handle .html file path click - similar to localhost URL but with file:// protocol
+function handleHtmlPathClick(matchedPath: string) {
+  console.log('[TerminalTab] handleHtmlPathClick:', matchedPath, 'sessionId:', sessionId);
+
+  if (!sessionId) {
+    console.log('[TerminalTab] no sessionId, cannot open WebViewer');
+    return;
+  }
+
+  // Parse CWD from terminal buffer for relative paths
+  let pathToSend = matchedPath;
+  const isAbsolutePath = /^[A-Za-z]:/.test(matchedPath) || /^[.\/]/.test(matchedPath);
+
+  if (!isAbsolutePath) {
+    const cwd = parseCwdFromBuffer();
+    if (cwd) {
+      const normalizedCwd = cwd.replace(/\//g, '\\');
+      const normalizedPath = matchedPath.replace(/\//g, '\\');
+
+      if (normalizedCwd.endsWith('\\') && !normalizedPath.startsWith('\\')) {
+        pathToSend = normalizedCwd + normalizedPath;
+      } else if (!normalizedCwd.endsWith('\\') && !normalizedPath.startsWith('\\')) {
+        pathToSend = normalizedCwd + '\\' + normalizedPath;
+      } else {
+        pathToSend = normalizedCwd + normalizedPath;
+      }
+
+      console.log('[TerminalTab] Resolved HTML path:', matchedPath, '->', pathToSend);
+    }
+  }
+
+  // Convert Windows path to file:// URL format
+  // C:\path\to\file.html -> file:///C:/path/to/file.html
+  const fileUrl = 'file:///' + pathToSend.replace(/\\/g, '/');
+  console.log('[TerminalTab] File URL:', fileUrl);
+
+  // Set WebViewer state
+  webViewerStore.setUrl(fileUrl);
   webViewerStore.setSessionId(sessionId);
   webViewerStore.setVisible(true);
 }
@@ -569,6 +610,71 @@ function initTerminal() {
             },
             activate(_event: MouseEvent, _text: string) {
               handleLocalhostUrlClick(matchedUrl);
+            },
+          });
+        }
+
+        // HTML file detection
+        const htmlRegex = /[-a-zA-Z0-9_:.\\\/]+\.html?/g;
+        let htmlMatch;
+
+        while ((htmlMatch = htmlRegex.exec(lineText)) !== null) {
+          const matchedPath = htmlMatch[0];
+          const matchStart = htmlMatch.index;
+          const matchEnd = matchStart + matchedPath.length;
+
+          // Try to build complete path by looking at previous lines (same logic as .md files)
+          let completePath = matchedPath;
+          const isAbsolutePath = /^[A-Za-z]:/.test(matchedPath) || /^[.\/]/.test(matchedPath);
+
+          if (!isAbsolutePath) {
+            let lookbackLine = bufferLineNumber - 1;
+            let pathPrefix = '';
+
+            while (lookbackLine >= 0) {
+              const prevLine = buffer.getLine(lookbackLine);
+              if (!prevLine) break;
+
+              const prevText = prevLine.translateToString(true);
+              const pathEndMatch = prevText.match(/([-a-zA-Z0-9_:.\\\/]+)$/);
+
+              if (pathEndMatch) {
+                const endPart = pathEndMatch[1];
+                const endIndex = pathEndMatch.index ?? 0;
+
+                if (endIndex > 0) {
+                  const charBefore = prevText[endIndex - 1];
+                  if (charBefore === ' ' || charBefore === '"' || charBefore === "'" || charBefore === '`') {
+                    pathPrefix = endPart + pathPrefix;
+                    completePath = pathPrefix + matchedPath;
+                    break;
+                  }
+                }
+
+                pathPrefix = endPart + pathPrefix;
+                lookbackLine--;
+              } else {
+                break;
+              }
+            }
+
+            if (pathPrefix && completePath === matchedPath) {
+              completePath = pathPrefix + matchedPath;
+            }
+          }
+
+          foundLinks.push({
+            range: {
+              start: { x: matchStart + 1, y: bufferLineNumber },
+              end: { x: matchEnd, y: bufferLineNumber },
+            },
+            text: matchedPath,
+            decorations: {
+              underline: true,
+              pointerCursor: true,
+            },
+            activate(_event: MouseEvent, _text: string) {
+              handleHtmlPathClick(completePath);
             },
           });
         }

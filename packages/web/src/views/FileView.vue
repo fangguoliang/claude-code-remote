@@ -404,6 +404,7 @@ function handleClickOutside(e: MouseEvent): void {
 }
 
 let agentLoadInterval: number | null = null;
+let cwdPollInterval: number | null = null;
 let wsConnected = false;
 
 onMounted(async () => {
@@ -424,16 +425,52 @@ onMounted(async () => {
 
   // Auto-select first online agent if available
   if (onlineAgents.value.length > 0 && !selectedAgentId.value) {
-    console.log('[FileView] auto-selecting first agent:', onlineAgents.value[0].agentId);
-    selectAgent(onlineAgents.value[0].agentId);
-  } else {
-    console.log('[FileView] no online agents or already selected');
+    const activeTab = terminalStore.tabs.find(t => t.id === terminalStore.activeTabId);
+    const activeTabAgent = activeTab ? agents.value.find(a => a.agentId === activeTab.agentId) : null;
+
+    if (activeTab && activeTabAgent?.online) {
+      // There's an active terminal tab - check for CWD with brief polling
+      // to give terminal output time to arrive (handles slow networks)
+      const activeTabCwd = terminalStore.getActiveTabCwd();
+      if (activeTabCwd) {
+        // CWD already available, use it immediately
+        selectedAgentId.value = activeTab.agentId;
+        fileStore.setLoading(true);
+        fileWebSocket.browse(activeTabCwd, activeTab.agentId);
+      } else {
+        // CWD not yet parsed from terminal output - select agent first
+        // then poll for CWD to arrive
+        selectedAgentId.value = activeTab.agentId;
+        let attempts = 0;
+        cwdPollInterval = window.setInterval(() => {
+          attempts++;
+          const cwd = terminalStore.getActiveTabCwd();
+          if (cwd && selectedAgentId.value === activeTab.agentId) {
+            clearInterval(cwdPollInterval!);
+            cwdPollInterval = null;
+            fileStore.setLoading(true);
+            fileWebSocket.browse(cwd, activeTab.agentId);
+          }
+          if (attempts >= 10) {
+            // Give up after 2.5s, fall back to home
+            clearInterval(cwdPollInterval!);
+            cwdPollInterval = null;
+            if (selectedAgentId.value === activeTab.agentId) {
+              selectAgent(activeTab.agentId);
+            }
+          }
+        }, 250);
+      }
+    } else {
+      selectAgent(onlineAgents.value[0].agentId);
+    }
   }
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   if (agentLoadInterval) clearInterval(agentLoadInterval);
+  if (cwdPollInterval) clearInterval(cwdPollInterval);
   fileWebSocket.disconnect();
   wsConnected = false;
   fileStore.clearCompletedTransfers();
@@ -441,20 +478,21 @@ onUnmounted(() => {
 
 // Watch for agents changes and auto-select
 watch(onlineAgents, (newOnlineAgents) => {
-  // Don't auto-select if WebSocket not connected
-  if (!wsConnected) return;
+  if (!wsConnected || selectedAgentId.value) return;
 
-  // If current selected agent went offline, select another
-  if (selectedAgentId.value && !newOnlineAgents.find(a => a.agentId === selectedAgentId.value)) {
-    if (newOnlineAgents.length > 0) {
-      selectAgent(newOnlineAgents[0].agentId);
+  // If no agent selected and there are online agents, try active tab CWD
+  if (newOnlineAgents.length > 0) {
+    const activeTab = terminalStore.tabs.find(t => t.id === terminalStore.activeTabId);
+    const activeTabAgent = activeTab ? agents.value.find(a => a.agentId === activeTab.agentId) : null;
+    const activeTabCwd = terminalStore.getActiveTabCwd();
+
+    if (activeTabCwd && activeTab && activeTabAgent?.online) {
+      selectedAgentId.value = activeTab.agentId;
+      fileStore.setLoading(true);
+      fileWebSocket.browse(activeTabCwd, activeTab.agentId);
     } else {
-      selectedAgentId.value = null;
+      selectAgent(newOnlineAgents[0].agentId);
     }
-  }
-  // If no agent selected and there are online agents, select first
-  else if (!selectedAgentId.value && newOnlineAgents.length > 0) {
-    selectAgent(newOnlineAgents[0].agentId);
   }
 });
 </script>

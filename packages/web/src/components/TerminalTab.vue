@@ -257,6 +257,12 @@ watch(() => props.visible, (visible, wasVisible) => {
   }
   // Fit and scroll to bottom when switching back to this tab
   if (visible && terminal) {
+    // Update CWD when switching to this tab
+    const cwd = parseCwdFromBuffer();
+    if (cwd) {
+      terminalStore.setTabCwd(props.tab.id, cwd);
+    }
+
     const buffer = terminal.buffer.active;
     console.log(`[TerminalTab] Before fit - ${props.tab.id}: cols=${terminal.cols}, rows=${terminal.rows}, buffer length=${buffer.length}`);
 
@@ -1130,6 +1136,38 @@ function initTerminal() {
         const commandText = commandMatch ? commandMatch[1] : lineText;
         if (commandText.trim()) {
           terminalStore.captureCommand(commandText);
+
+          // Detect cd/Set-Location commands and update CWD immediately
+          // so file browser has the latest path even before server output arrives
+          const cdMatch = commandText.trim().match(/^(?:cd|Set-Location|chdir|sl)\s+(.+)$/i);
+          if (cdMatch) {
+            let target = cdMatch[1].trim();
+            // Remove -LiteralPath / -Path flags
+            target = target.replace(/-(?:Literal)?Path\s+/i, '');
+            // Strip surrounding quotes
+            const quoteMatch = target.match(/^["'](.+?)["']$/);
+            if (quoteMatch) target = quoteMatch[1];
+
+            const tabId = props.tab.id;
+            const currentCwd = terminalStore.getTabCwd(tabId);
+
+            if (/^[A-Za-z]:/.test(target) || /^[\/\\]/.test(target)) {
+              // Absolute path or drive switch - use as-is
+              terminalStore.setTabCwd(tabId, target);
+            } else if (currentCwd) {
+              // Relative path - resolve against current CWD
+              const sep = currentCwd.includes('/') ? '/' : '\\';
+              // Simple path join (handles .., ., normal segments)
+              const parts = [...currentCwd.split(/[\/\\]/), ...target.split(/[\/\\]/)];
+              const resolved: string[] = [];
+              for (const p of parts) {
+                if (p === '' || p === '.') continue;
+                if (p === '..') { if (resolved.length > 1) resolved.pop(); }
+                else resolved.push(p);
+              }
+              terminalStore.setTabCwd(tabId, resolved.join(sep));
+            }
+          }
         }
       }
     }
@@ -1304,6 +1342,13 @@ function handleWsMessage(msg: any) {
       break;
     case 'session:output':
       terminal?.write(msg.payload.data);
+      // Track CWD from terminal buffer after output
+      if (terminal) {
+        const cwd = parseCwdFromBuffer();
+        if (cwd) {
+          terminalStore.setTabCwd(props.tab.id, cwd);
+        }
+      }
       // Auto-scroll to bottom if user hasn't scrolled up
       if (!userScrolledUp && terminal) {
         // Use requestAnimationFrame to ensure DOM is updated

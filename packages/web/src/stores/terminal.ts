@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
 
 export interface Tab {
   id: string;
@@ -177,6 +177,9 @@ export const useTerminalStore = defineStore('terminal', () => {
   const capturedCommands = ref<CapturedCommand[]>(loadCapturedCommands());
   const shortcuts = ref<Shortcut[]>([]);
 
+  // Track current working directory per tab (tabId -> cwd)
+  const tabCwd = reactive<Record<string, string>>({});
+
   // Current username for user-specific storage
   let currentUsername = '';
 
@@ -284,6 +287,7 @@ export const useTerminalStore = defineStore('terminal', () => {
         tabs.value.splice(index, 1);
       }
       keySenders.delete(id);
+      removeTabCwd(id);
 
       // Also remove from history (by sessionId)
       if (tab.sessionId) {
@@ -453,6 +457,29 @@ export const useTerminalStore = defineStore('terminal', () => {
     return session?.activeTabId || null;
   }
 
+  // Set the CWD for a specific tab
+  function setTabCwd(tabId: string, cwd: string) {
+    tabCwd[tabId] = cwd;
+  }
+
+  // Get the CWD for a specific tab
+  function getTabCwd(tabId: string): string | undefined {
+    return tabCwd[tabId];
+  }
+
+  // Get the CWD of the active tab
+  function getActiveTabCwd(): string | undefined {
+    if (activeTabId.value) {
+      return tabCwd[activeTabId.value];
+    }
+    return undefined;
+  }
+
+  // Remove CWD for a tab (called when tab is closed)
+  function removeTabCwd(tabId: string) {
+    delete tabCwd[tabId];
+  }
+
   // Clear current session only (used on logout, but keep history)
   function clearCurrentSession() {
     tabs.value = [];
@@ -565,5 +592,9 @@ export const useTerminalStore = defineStore('terminal', () => {
     clearCapturedCommands,
     saveShortcut,
     deleteShortcut,
+    setTabCwd,
+    getTabCwd,
+    getActiveTabCwd,
+    removeTabCwd,
   };
 });

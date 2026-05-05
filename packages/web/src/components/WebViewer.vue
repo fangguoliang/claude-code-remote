@@ -26,15 +26,21 @@
         <button
           :class="{ active: webViewerStore.viewport === 'mobile' }"
           @click="setViewport('mobile')"
-        >📱 手机</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="1" ry="1"/><path d="M12 18h.01"/></svg>
+          手机</button>
         <button
           :class="{ active: webViewerStore.viewport === 'tablet' }"
           @click="setViewport('tablet')"
-        >📋 平板</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="1" ry="1"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/><path d="M16 18h.01"/></svg>
+          平板</button>
         <button
           :class="{ active: webViewerStore.viewport === 'desktop' }"
           @click="setViewport('desktop')"
-        >🖥 桌面</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="5" rx="1"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
+          桌面</button>
       </div>
     </template>
 
@@ -55,15 +61,21 @@
         <button
           :class="{ active: webViewerStore.viewport === 'mobile' }"
           @click="setViewport('mobile')"
-        >📱</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="1" ry="1"/><path d="M12 18h.01"/></svg>
+        </button>
         <button
           :class="{ active: webViewerStore.viewport === 'tablet' }"
           @click="setViewport('tablet')"
-        >📋</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="1" ry="1"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/><path d="M16 18h.01"/></svg>
+        </button>
         <button
           :class="{ active: webViewerStore.viewport === 'desktop' }"
           @click="setViewport('desktop')"
-        >🖥</button>
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="5" rx="1"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
+        </button>
         <button class="btn-close" @click="close">×</button>
       </div>
     </template>
@@ -74,7 +86,10 @@
     v-if="webViewerStore.state === 'minimized'"
     class="web-viewer minimized-bar"
   >
-    <span class="minimized-title">🌐 {{ displayUrl }}</span>
+    <span class="minimized-title">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      {{ displayUrl }}
+    </span>
     <button class="btn-restore" @click="restore">恢复</button>
     <button class="btn-close-minimized" @click="close">×</button>
   </div>
@@ -212,7 +227,7 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 .web-viewer.fullscreen {
   inset: 0;
   display: flex;
-  background: #1a1a2e;
+  background: var(--bg-page);
 }
 
 .web-viewer.fullscreen:not(.landscape) {
@@ -227,10 +242,13 @@ watch(() => webViewerStore.state, (newState, oldState) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: #16213e;
-  color: #e0e0e0;
+  padding: var(--space-2) var(--space-4);
+  background: rgba(22, 33, 62, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-primary);
   height: 48px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .viewer-title {
@@ -246,14 +264,12 @@ watch(() => webViewerStore.state, (newState, oldState) => {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  /* White background as default - iframe pages will overlay their own styles */
   background: #fff;
 }
 
 .landscape-content {
   flex: 1;
   overflow: auto;
-  /* White background as default */
   background: #fff;
   align-items: flex-start;
   justify-content: flex-start;
@@ -264,17 +280,17 @@ watch(() => webViewerStore.state, (newState, oldState) => {
   display: block;
   width: 100%;
   height: 100%;
-  /* Reset color-scheme to default (both light and dark supported)
-     This prevents inheriting parent's dark-only scheme,
-     allowing iframe document to control its own styling */
   color-scheme: light dark;
 }
 
 .viewer-controls {
   display: flex;
-  gap: 8px;
-  padding: 8px;
-  background: #16213e;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: rgba(22, 33, 62, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .viewer-controls:not(.landscape-controls) {
@@ -285,46 +301,59 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 .landscape-controls {
   flex-direction: column;
   width: 48px;
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+  border-top: none;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .viewer-controls button {
-  background: #1a1a2e;
-  border: 1px solid #4a4a6a;
-  color: #e0e0e0;
-  padding: 8px 16px;
-  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
-}
-
-.landscape-controls button {
-  padding: 8px;
-  width: 36px;
-  height: 36px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.landscape-controls button {
+  padding: var(--space-2);
+  width: 36px;
+  height: 36px;
 }
 
 .viewer-controls button.active {
-  background: #e94560;
-  border-color: #e94560;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
 }
 
-.viewer-controls button:hover {
-  background: #2a2a4e;
+.viewer-controls button:hover:not(.active) {
+  background: var(--bg-surface-hover);
 }
 
 .btn-close, .btn-minimize {
   background: transparent;
   border: none;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 20px;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.btn-close:hover, .btn-minimize:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
 }
 
 .landscape-controls .btn-close {
@@ -332,7 +361,7 @@ watch(() => webViewerStore.state, (newState, oldState) => {
 }
 
 .landscape-controls .btn-minimize {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* Minimized bar */
@@ -344,30 +373,58 @@ watch(() => webViewerStore.state, (newState, oldState) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: #16213e;
-  border-top: 1px solid #4a4a6a;
-  color: #e0e0e0;
+  padding: var(--space-2) var(--space-4);
+  background: rgba(22, 33, 62, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-default);
+  color: var(--text-primary);
 }
 
 .minimized-title {
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-restore {
-  background: #e94560;
+  background: var(--accent);
   border: none;
-  color: white;
-  padding: 6px 16px;
-  border-radius: 4px;
+  color: var(--text-on-accent);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
   cursor: pointer;
+  font-weight: 500;
+  transition: background var(--transition-fast);
+  min-height: 44px;
+}
+
+.btn-restore:hover {
+  background: var(--accent-hover);
 }
 
 .btn-close-minimized {
   background: transparent;
   border: none;
-  color: #e0e0e0;
+  color: var(--text-secondary);
   font-size: 18px;
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.btn-close-minimized:hover {
+  color: var(--error);
+  background: var(--accent-subtle);
 }
 </style>

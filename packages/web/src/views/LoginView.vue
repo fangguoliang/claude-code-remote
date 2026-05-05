@@ -114,17 +114,129 @@ async function handleChangePassword() {
 </script>
 
 <style scoped>
-.login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #1a1a2e; }
-.login-card { background: #16213e; padding: 2rem; border-radius: 8px; width: 100%; max-width: 400px; }
-.login-card h1 { color: #e94560; margin-bottom: 0.5rem; }
-.login-card p { color: #a0a0a0; margin-bottom: 1.5rem; }
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; color: #e0e0e0; margin-bottom: 0.5rem; }
-.form-group input { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 4px; background: #1a1a2e; color: #fff; }
-button { width: 100%; padding: 0.75rem; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
-button:disabled { opacity: 0.6; }
-.error { color: #e94560; margin-top: 1rem; }
-.success { color: #4caf50; margin-top: 1rem; }
-.settings-link { display: block; text-align: center; margin-top: 1rem; color: #a0a0a0; }
-.toggle-link { display: block; text-align: center; margin-top: 1rem; color: #a0a0a0; font-size: 0.9rem; }
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--bg-page);
+  padding: var(--space-4);
+}
+
+.login-card {
+  background: var(--bg-surface);
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.login-card h1 {
+  color: var(--accent);
+  margin-bottom: var(--space-1);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.login-card p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+  font-size: 0.95rem;
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group label {
+  display: block;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-root);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+button {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.error {
+  color: var(--error);
+  margin-top: var(--space-4);
+  font-size: 0.9rem;
+}
+
+.success {
+  color: var(--success);
+  margin-top: var(--space-4);
+  font-size: 0.9rem;
+}
+
+.settings-link {
+  display: block;
+  text-align: center;
+  margin-top: var(--space-6);
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.settings-link:hover {
+  color: var(--accent);
+}
+
+.toggle-link {
+  display: block;
+  text-align: center;
+  margin-top: var(--space-4);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  transition: color var(--transition-fast);
+}
+
+.toggle-link:hover {
+  color: var(--accent);
+}
 </style>

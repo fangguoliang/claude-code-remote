@@ -378,10 +378,27 @@ function initTerminal() {
     fontFamily: settingsStore.settings.fontFamily,
     fontSize: settingsStore.settings.fontSize,
     theme: {
-      background: '#1a1a2e',
-      foreground: '#e0e0e0',
+      background: '#0f0f23',
+      foreground: '#e8e8f0',
       cursor: '#e94560',
-      cursorAccent: '#1a1a2e', // Cursor background color
+      cursorAccent: '#0f0f23',
+      selectionBackground: 'rgba(233, 69, 96, 0.3)',
+      black: '#2d2d3f',
+      red: '#e94560',
+      green: '#4caf50',
+      yellow: '#ff9800',
+      blue: '#4fc3f7',
+      magenta: '#7b1fa2',
+      cyan: '#00bcd4',
+      white: '#e8e8f0',
+      brightBlack: '#4a4a5e',
+      brightRed: '#ff6b8a',
+      brightGreen: '#66bb6a',
+      brightYellow: '#ffa726',
+      brightBlue: '#81d4fa',
+      brightMagenta: '#ab47bc',
+      brightCyan: '#26c6da',
+      brightWhite: '#ffffff',
     },
     scrollback: 10000,
     scrollSensitivity: 30,
@@ -1609,8 +1626,20 @@ defineExpose({
   touch-action: pan-y;
 }
 .terminal { width: 100%; height: 100%; }
-.status-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(26, 26, 46, 0.9); color: #e0e0e0; }
-.status-overlay.error { color: #e94560; }
+.status-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 15, 35, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+}
+.status-overlay.error { color: var(--error); }
 
 /* Prevent pull-to-refresh on all xterm elements */
 .terminal-wrapper :deep(.xterm),

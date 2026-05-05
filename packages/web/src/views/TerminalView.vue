@@ -44,10 +44,12 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <router-link to="/files" class="action-btn" title="文件">📁</router-link>
+        <router-link to="/files" class="action-btn" title="文件">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+        </router-link>
         <div class="history-dropdown" v-if="historyTabs.length > 0">
           <button class="history-btn" @click="showHistory = !showHistory" title="历史记录">
-            📋
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
           </button>
           <div class="dropdown-menu history-menu" v-show="showHistory">
             <div class="menu-header">历史终端 ({{ historyTabs.length }})</div>
@@ -60,7 +62,9 @@
             </div>
           </div>
         </div>
-        <router-link to="/settings" class="action-btn" title="设置">⚙</router-link>
+        <router-link to="/settings" class="action-btn" title="设置">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </router-link>
         <button @click="logout" class="action-btn power-btn" title="登出">
           <span class="power-icon"></span>
         </button>
@@ -89,7 +93,9 @@
     <!-- 底部快捷键按钮 -->
     <div class="bottom-bar" v-if="tabs.length > 0">
       <button class="key-btn tab-btn" @click="sendKey('Tab')">Tab</button>
-      <button class="key-btn capture-btn" @click="openSaveModal" :disabled="capturedCommands.length === 0" title="保存为快捷方式">📝</button>
+      <button class="key-btn capture-btn" @click="openSaveModal" :disabled="capturedCommands.length === 0" title="保存为快捷方式">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63 14 7"/><path d="M21 1.5V6h-4.5"/><path d="m21 3-8 8"/><path d="m16 8 4.5 4.5"/></svg>
+        </button>
       <button class="key-btn ctrl-c-btn" @click="sendKey('CtrlC')" title="Ctrl+C 中断">C</button>
       <button class="key-btn ctrl-d-btn" @click="sendKey('CtrlD')" title="Ctrl+D 退出/EOF">D</button>
       <div class="spacer"></div>
@@ -536,38 +542,46 @@ onUnmounted(() => {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  background: #1a1a2e;
+  background: var(--bg-page);
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #16213e;
-  padding: 0.35rem 0.4rem;
-  gap: 0.25rem;
+  background: rgba(22, 33, 62, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 50;
 }
 
 .agents-dropdown {
   position: relative;
+  z-index: 200;
 }
 
 .dropdown-btn {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-1);
   padding: 0.45rem 0.6rem;
-  background: #1a1a2e;
+  background: var(--bg-surface);
   border: none;
-  border-radius: 4px;
-  color: #e0e0e0;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   font-size: 0.82rem;
   cursor: pointer;
   white-space: nowrap;
+  transition: background var(--transition-fast);
 }
 
 .dropdown-btn:hover {
-  background: #252547;
+  background: var(--bg-surface-hover);
 }
 
 .arrow {
@@ -581,27 +595,34 @@ onUnmounted(() => {
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + var(--space-1));
   left: 0;
   min-width: 200px;
   max-width: 280px;
   max-height: 300px;
   overflow-y: auto;
-  background: #16213e;
-  border: 1px solid #333;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  z-index: 100;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 999;
+  animation: dropdown-in 150ms ease;
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  color: #e0e0e0;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--text-primary);
   cursor: pointer;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
 }
 
 .menu-item:last-child {
@@ -609,54 +630,64 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: #1a1a2e;
+  background: var(--bg-surface-hover);
 }
 
 .menu-item.loading,
-.menu-item.error,
 .menu-item.no-agents {
-  color: #888;
+  color: var(--text-muted);
   cursor: default;
 }
 
 .menu-item.error {
-  color: #e94560;
+  color: var(--error);
+  cursor: default;
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #666;
+  background: var(--text-muted);
   flex-shrink: 0;
+  transition: background var(--transition-fast);
 }
 
 .status-dot.online {
-  background: #4caf50;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
 .history-dropdown {
   position: relative;
+  z-index: 200;
 }
 
 .history-btn {
-  padding: 0.45rem;
+  padding: var(--space-2);
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 1.1rem;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .history-btn:hover {
-  color: #e0e0e0;
+  color: var(--text-primary);
+  background: var(--accent-subtle);
 }
 
 .history-menu {
@@ -666,16 +697,19 @@ onUnmounted(() => {
 }
 
 .menu-header {
-  padding: 0.5rem 0.75rem;
-  color: #888;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
   font-size: 0.75rem;
-  border-bottom: 1px solid #333;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .history-item {
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .history-info {
@@ -691,21 +725,28 @@ onUnmounted(() => {
 
 .history-time {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .action-btn {
-  padding: 0.45rem;
+  padding: var(--space-2);
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-secondary);
   text-decoration: none;
   cursor: pointer;
-  font-size: 1.1rem;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
-  color: #e94560;
+  color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 /* Power button icon */
@@ -737,23 +778,22 @@ onUnmounted(() => {
 .tabs-bar {
   display: flex;
   align-items: center;
-  background: #1a1a2e;
-  padding: 0.25rem 0.5rem;
-  gap: 0.5rem;
-  border-bottom: 1px solid #333;
+  background: var(--bg-surface);
+  padding: var(--space-1) var(--space-2);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .tabs-scroll {
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  /* 隐藏滚动条但保留滚动功能 */
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 .tabs-scroll::-webkit-scrollbar {
-  height: 4px;
+  height: 3px;
 }
 
 .tabs-scroll::-webkit-scrollbar-track {
@@ -761,65 +801,76 @@ onUnmounted(() => {
 }
 
 .tabs-scroll::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--border-strong);
   border-radius: 2px;
 }
 
 .tabs {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   white-space: nowrap;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  background: #16213e;
-  border-radius: 4px;
-  color: #888;
-  font-size: 0.85rem;
+  gap: var(--space-1);
+  padding: 0.3rem 0.5rem;
+  background: var(--bg-root);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .tab.active {
-  color: #fff;
-  background: #252547;
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-sm);
 }
 
 .tab .close {
-  font-size: 1rem;
-  opacity: 0.6;
+  font-size: 0.9rem;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  margin-left: 2px;
 }
 
 .tab .close:hover {
   opacity: 1;
-  color: #e94560;
+  color: var(--error);
 }
 
 .add-tab-btn {
-  padding: 0.4rem 0.75rem;
-  background: #e94560;
+  padding: 0.3rem 0.6rem;
+  background: var(--accent);
   border: none;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 1rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-on-accent);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background var(--transition-fast), transform var(--transition-fast);
 }
 
 .add-tab-btn:hover {
-  background: #ff6b6b;
+  background: var(--accent-hover);
+}
+
+.add-tab-btn:active {
+  transform: scale(0.96);
 }
 
 .terminal-container {
   flex: 1;
   position: relative;
   overflow: hidden;
+  background: var(--bg-root);
 }
 
 .empty-state {
@@ -828,60 +879,62 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #888;
+  color: var(--text-secondary);
   text-align: center;
-  padding: 2rem;
+  padding: var(--space-6);
 }
 
 .empty-state .hint {
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.85rem;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 /* 底部快捷键按钮 */
 .bottom-bar {
   display: flex;
   align-items: center;
-  padding: 0.4rem 0.5rem;
-  background: #16213e;
-  gap: 0.2rem;
+  padding: var(--space-1);
+  background: rgba(22, 33, 62, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  gap: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .spacer {
-  flex: 1;
-  min-width: 0.3rem;
+  width: var(--space-1);
+  flex-shrink: 0;
 }
 
 .key-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
+  flex: 1 0 0;
+  min-width: 0;
   height: 40px;
-  padding: 0 0.5rem;
-  background: #252547;
-  border: 1px solid #333;
-  border-radius: 6px;
-  color: #e0e0e0;
-  font-size: 0.9rem;
+  padding: 0;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.8rem;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  flex-shrink: 0;
+  transition: background var(--transition-fast), transform var(--transition-fast);
 }
 
 .key-btn:active {
-  background: #e94560;
   transform: scale(0.95);
 }
 
 .tab-btn {
-  min-width: 40px;
-  font-weight: bold;
-  font-size: 0.95rem;
   background: #7b1fa2;
+  font-weight: 700;
+  font-size: 0.8rem;
 }
 
 .tab-btn:active {
@@ -890,9 +943,8 @@ onUnmounted(() => {
 }
 
 .ctrl-c-btn {
-  background: #c62828;
-  min-width: 40px;
-  font-weight: bold;
+  background: var(--error);
+  font-weight: 700;
 }
 
 .ctrl-c-btn:active {
@@ -901,9 +953,8 @@ onUnmounted(() => {
 }
 
 .ctrl-d-btn {
-  background: #1565c0;
-  min-width: 40px;
-  font-weight: bold;
+  background: var(--info);
+  font-weight: 700;
 }
 
 .ctrl-d-btn:active {
@@ -912,15 +963,36 @@ onUnmounted(() => {
 }
 
 .arrow-btn {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .bottom-btn {
-  background: #4caf50;
+  background: var(--success);
 }
 
 .bottom-btn:active {
   background: #388e3c;
+  transform: scale(0.95);
+}
+
+/* 记录按钮 */
+.capture-btn {
+  background: var(--accent);
+}
+
+.capture-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.capture-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.capture-btn:not(:disabled):active {
+  background: var(--accent-hover);
+  transform: scale(0.95);
 }
 
 /* To bottom icon */
@@ -937,27 +1009,28 @@ onUnmounted(() => {
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 8px solid #fff;
+  border-top: 8px solid var(--text-on-accent);
 }
 
 .to-bottom-icon::after {
   content: '';
   width: 14px;
   height: 2px;
-  background: #fff;
+  background: var(--text-on-accent);
 }
 
 /* 底部作者栏 */
 .footer-bar {
   display: flex;
   justify-content: center;
-  padding: 0.25rem;
-  background: #16213e;
+  padding: var(--space-1);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .author {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* 快捷方式下拉框 */
@@ -974,50 +1047,46 @@ onUnmounted(() => {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
 }
 
 .shortcut-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
   flex: 1;
+  min-width: 0;
 }
 
 .shortcut-name {
-  color: #e0e0e0;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .shortcut-meta {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .delete-btn {
-  padding: 0.25rem 0.5rem;
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: none;
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .delete-btn:hover {
-  color: #e94560;
-}
-
-/* 记录按钮 */
-.capture-btn {
-  background: #e94560;
-  font-size: 1.1rem;
-}
-
-.capture-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.capture-btn:not(:disabled):active {
-  background: #ff6b6b;
+  color: var(--error);
+  background: var(--accent-subtle);
 }
 
 /* 弹窗样式 */
@@ -1025,129 +1094,160 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: overlay-in 150ms ease;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
-  background: #16213e;
-  border-radius: 8px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 400px;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-default);
+  animation: modal-in 200ms ease;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-header {
-  padding: 1rem;
-  border-bottom: 1px solid #333;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #e0e0e0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .modal-body {
-  padding: 1rem;
+  padding: var(--space-4);
   overflow-y: auto;
   flex: 1;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  color: #888;
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
   font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .form-group input[type="text"] {
   width: 100%;
-  padding: 0.5rem;
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #e0e0e0;
+  padding: var(--space-3);
+  background: var(--bg-root);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   font-size: 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-group input[type="text"]:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .command-list {
   max-height: 200px;
   overflow-y: auto;
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 4px;
+  background: var(--bg-root);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
 }
 
 .command-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid #333;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
 }
 
 .command-item:last-child {
   border-bottom: none;
 }
 
+.command-item:hover {
+  background: var(--bg-surface);
+}
+
 .command-item input[type="checkbox"] {
-  accent-color: #e94560;
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
 }
 
 .command-text {
-  color: #e0e0e0;
-  font-family: monospace;
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.85rem;
   word-break: break-all;
 }
 
 .modal-footer {
-  padding: 1rem;
-  border-top: 1px solid #333;
+  padding: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .btn-cancel,
 .btn-save {
-  padding: 0.5rem 1rem;
+  padding: var(--space-3) var(--space-4);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 500;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
 }
 
 .btn-cancel {
-  background: #333;
-  color: #e0e0e0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
 }
 
 .btn-cancel:hover {
-  background: #444;
+  background: var(--bg-surface-hover);
 }
 
 .btn-save {
-  background: #e94560;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-on-accent);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: #ff6b6b;
+  background: var(--accent-hover);
 }
 
 .btn-save:disabled {

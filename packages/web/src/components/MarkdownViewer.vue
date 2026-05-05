@@ -214,7 +214,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #1E1E1E;
+  background: var(--bg-root);
   display: flex;
   flex-direction: column;
 }
@@ -223,29 +223,35 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #252526;
-  border-bottom: 1px solid #3C3C3C;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-strong);
   flex-shrink: 0;
 }
 
 .back-btn, .save-btn {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  min-height: 44px;
 }
 
 .back-btn {
   background: transparent;
-  color: #e0e0e0;
+  color: var(--text-primary);
+}
+
+.back-btn:hover {
+  background: var(--bg-surface-hover);
 }
 
 .save-btn {
   background: rgba(76, 175, 80, 0.15);
   border: 1px solid rgba(76, 175, 80, 0.3);
-  color: #4CAF50;
+  color: var(--success);
 }
 
 .save-btn:disabled {
@@ -254,7 +260,7 @@ onUnmounted(() => {
 }
 
 .file-name {
-  color: #D4D4D4;
+  color: var(--text-primary);
   font-size: 14px;
   max-width: 50%;
   overflow: hidden;
@@ -274,14 +280,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1E1E1E;
+  background: var(--bg-root);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #3C3C3C;
-  border-top-color: #FF8E53;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -291,11 +297,11 @@ onUnmounted(() => {
 }
 
 .hint-bar {
-  padding: 8px;
+  padding: var(--space-2);
   text-align: center;
-  background: #252526;
-  border-top: 1px solid #3C3C3C;
-  color: #8B92A5;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-strong);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -304,12 +310,13 @@ onUnmounted(() => {
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 12px 24px;
+  padding: var(--space-3) var(--space-6);
   background: rgba(76, 175, 80, 0.9);
   color: #fff;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   font-size: 14px;
   z-index: 1001;
+  box-shadow: var(--shadow-lg);
 }
 
 .toast-error {

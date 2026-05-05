@@ -257,24 +257,17 @@ watch(() => props.visible, (visible, wasVisible) => {
   }
   // Fit and scroll to bottom when switching back to this tab
   if (visible && terminal) {
-    // Log terminal buffer size before fit
     const buffer = terminal.buffer.active;
     console.log(`[TerminalTab] Before fit - ${props.tab.id}: cols=${terminal.cols}, rows=${terminal.rows}, buffer length=${buffer.length}`);
 
-    // Use requestAnimationFrame for better timing after v-show
     requestAnimationFrame(() => {
       if (!terminal) return;
       safeFit();
-
-      // Log terminal buffer size after fit
       console.log(`[TerminalTab] After fit - ${props.tab.id}: cols=${terminal.cols}, rows=${terminal.rows}`);
 
       requestAnimationFrame(() => {
         if (!terminal) return;
-        // Force scroll to bottom - use multiple methods to ensure it works
         forceScrollToBottom();
-
-        // Additional fit attempt after a short delay
         setTimeout(() => {
           if (!terminal) return;
           safeFit();
@@ -286,6 +279,12 @@ watch(() => props.visible, (visible, wasVisible) => {
   }
 });
 
+// Focus terminal when MarkdownViewer closes
+watch(() => fileStore.viewerVisible, (visible) => {
+  if (!visible && terminal) {
+    setTimeout(() => tryFocus(), 100);
+  }
+});
 // Try to focus terminal with retries
 function tryFocus(attempts = 0) {
   if (!terminal) return;
@@ -1095,6 +1094,11 @@ function initTerminal() {
     // Start WebSocket connection after terminal is ready
     connectWebSocket();
   }, 50);
+
+  // Auto-focus terminal after initialization
+  setTimeout(() => {
+    tryFocus();
+  }, 200);
 
   // Restore scrollback from sessionStorage if exists
   const savedScrollback = sessionStorage.getItem(`scrollback:${props.tab.id}`);

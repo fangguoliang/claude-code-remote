@@ -342,6 +342,7 @@ function closeTab(id: string) {
 
 function setActiveTab(id: string) {
   terminalStore.setActiveTab(id);
+  terminalStore.focusActiveTab();
 }
 
 function logout() {
@@ -471,6 +472,8 @@ function saveShortcutHandler() {
     closeSaveModal();
     // Clear captured commands after saving
     terminalStore.clearCapturedCommands();
+    // Focus terminal after returning
+    terminalStore.focusActiveTab();
   } else {
     alert('保存失败：请确保名称不为空且至少选择一条命令');
   }

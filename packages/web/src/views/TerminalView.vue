@@ -818,7 +818,7 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--space-1);
   padding: 0.3rem 0.5rem;
-  background: var(--bg-root);
+  background: var(--bg-surface-elevated);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 0.8rem;
@@ -829,8 +829,8 @@ onUnmounted(() => {
 }
 
 .tab.active {
-  color: var(--text-primary);
-  background: var(--bg-surface-elevated);
+  color: var(--text-on-accent);
+  background: var(--accent);
   box-shadow: var(--shadow-sm);
 }
 

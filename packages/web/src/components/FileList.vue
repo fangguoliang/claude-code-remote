@@ -17,6 +17,7 @@
         </span>
         <span class="name">{{ entry.name }}</span>
         <span v-if="!entry.isDirectory && entry.size" class="size">{{ formatSize(entry.size) }}</span>
+        <span v-if="entry.modifiedAt" class="time">{{ formatTime(entry.modifiedAt) }}</span>
       </div>
     </div>
   </div>
@@ -50,6 +51,15 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  const MM = String(d.getMonth() + 1).padStart(2, '0');
+  const DD = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${MM}-${DD} ${hh}:${mm}`;
 }
 </script>
 
@@ -104,5 +114,13 @@ function formatSize(bytes: number): string {
   font-size: 0.75rem;
   margin-left: var(--space-3);
   font-variant-numeric: tabular-nums;
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 </style>

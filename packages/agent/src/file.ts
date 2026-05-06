@@ -55,6 +55,13 @@ export class FileManager {
           } catch {
             // 忽略无法访问的文件
           }
+        } else {
+          try {
+            const stat = await fs.stat(path.join(expandedPath, entry.name));
+            fileEntry.modifiedAt = stat.mtimeMs;
+          } catch {
+            // 忽略无法访问的目录
+          }
         }
 
         result.push(fileEntry);

@@ -413,6 +413,13 @@ let agentLoadInterval: number | null = null;
 let cwdPollInterval: number | null = null;
 let wsConnected = false;
 
+// Auto-refresh on upload complete
+function handleUploadComplete(dir: string) {
+  if (currentPath.value === dir && selectedAgentId.value) {
+    fileWebSocket.browse(currentPath.value, selectedAgentId.value);
+  }
+}
+
 onMounted(async () => {
   console.log('[FileView] onMounted start');
   document.addEventListener('click', handleClickOutside);
@@ -422,6 +429,9 @@ onMounted(async () => {
   await connectWebSocket();
   wsConnected = true;
   console.log('[FileView] WebSocket connected');
+
+  // Register upload complete handler
+  fileWebSocket.onUploadComplete(handleUploadComplete);
 
   // Load agents
   console.log('[FileView] loading agents...');
@@ -477,6 +487,7 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   if (agentLoadInterval) clearInterval(agentLoadInterval);
   if (cwdPollInterval) clearInterval(cwdPollInterval);
+  fileWebSocket.offUploadComplete(handleUploadComplete);
   fileWebSocket.disconnect();
   wsConnected = false;
   fileStore.clearCompletedTransfers();

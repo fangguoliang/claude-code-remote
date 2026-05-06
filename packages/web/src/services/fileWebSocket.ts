@@ -321,11 +321,44 @@ class FileWebSocketService {
 
     if (payload.success) {
       store.updateTransfer(transferId, { status: 'completed', percent: 100 });
+
+      // Extract parent directory from the uploaded file path
+      const parts = payload.path.split(/[/\\]/).filter(Boolean);
+      parts.pop(); // remove filename
+      const parentDir = parts.join('\\');
+
+      // Notify view to refresh if parent dir matches current view
+      setTimeout(() => {
+        const currentStore = useFileStore();
+        const normalizedCurrent = currentStore.currentPath.replace(/\//g, '\\');
+        const normalizedParent = (parentDir || '').replace(/\//g, '\\');
+        if (normalizedCurrent === normalizedParent) {
+          this.emitUploadComplete(parentDir);
+        }
+      }, 300);
+
       setTimeout(() => {
         store.removeTransfer(transferId);
       }, 2000);
     } else {
       store.updateTransfer(transferId, { status: 'error', error: payload.error });
+    }
+  }
+
+  private uploadCompleteHandlers: ((dir: string) => void)[] = [];
+
+  private emitUploadComplete(dir: string) {
+    this.uploadCompleteHandlers.forEach(handler => handler(dir));
+  }
+
+  onUploadComplete(handler: (dir: string) => void) {
+    this.uploadCompleteHandlers.push(handler);
+  }
+
+  offUploadComplete(handler: (dir: string) => void) {
+    const index = this.uploadCompleteHandlers.indexOf(handler);
+    if (index !== -1) {
+      this.uploadCompleteHandlers.splice(index, 1);
     }
   }
 
